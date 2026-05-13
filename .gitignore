@@ -31,6 +31,7 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+~$*    # MS Office lock files
 
 # Pitch deck build output (keep mockups + screenshots + build-deck.js sources)
 _pitch-deck/.playwright-mcp/
