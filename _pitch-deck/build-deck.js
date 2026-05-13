@@ -458,26 +458,7 @@ slides.push(appSlide({
   ],
 }));
 
-slides.push(appSlide({
-  n: '09', tier: 3, status: 'IMPLEMENTED',
-  title: 'Trust Config & Cert Expiry Console',
-  eyebrow: 'TIER 3 · INCIDENT PREVENTION · IMPLEMENTED',
-  screenshot: 'app09-certs.png',
-  pitchHeadline: 'Every certificate across the BTP landscape with rotation owner, blast radius, and acknowledgement workflow.',
-  pitchBullets: [
-    'Aggregates from destinations, IAS SAML/OIDC, XSUAA trust configs, cTMS keys.',
-    'Severity ladder: notice (90d) → warn (30d) → critical (14d) → expired.',
-    'Per-engagement rotation-owner registry maps cert patterns to named humans.',
-    'Acknowledge-until workflow suppresses noise during planned rotation windows.',
-  ],
-  valuePoints: [
-    'Prevents the kind of incident that becomes a referral story.',
-    'Universally relevant — every BTP customer has an expiring cert they don\'t know about.',
-    'Word-of-mouth multiplier: prevents one incident, sells the next three engagements.',
-  ],
-}));
-
-// ─── Backlog placeholders ────────────────────────────────────────────────────
+// ─── Apps #6–#11 (formerly backlog, now all implemented) ───────────────────
 slides.push(appSlide({
   n: '06', tier: 2, status: 'IMPLEMENTED',
   title: 'Audit-Log & Change Inventory Console',
@@ -532,6 +513,25 @@ slides.push(appSlide({
     'Credibility wedge for AI-curious CIOs with fresh budget.',
     'Pairs with the AI swarm offering for full-stack AI governance.',
     'Higher engineering risk: AI Core APIs still maturing — built when an engagement specifically scopes it.',
+  ],
+}));
+
+slides.push(appSlide({
+  n: '09', tier: 3, status: 'IMPLEMENTED',
+  title: 'Trust Config & Cert Expiry Console',
+  eyebrow: 'TIER 3 · INCIDENT PREVENTION · IMPLEMENTED',
+  screenshot: 'app09-certs.png',
+  pitchHeadline: 'Every certificate across the BTP landscape with rotation owner, blast radius, and acknowledgement workflow.',
+  pitchBullets: [
+    'Aggregates from destinations, IAS SAML/OIDC, XSUAA trust configs, cTMS keys.',
+    'Severity ladder: notice (90d) → warn (30d) → critical (14d) → expired.',
+    'Per-engagement rotation-owner registry maps cert patterns to named humans.',
+    'Acknowledge-until workflow suppresses noise during planned rotation windows.',
+  ],
+  valuePoints: [
+    'Prevents the kind of incident that becomes a referral story.',
+    'Universally relevant — every BTP customer has an expiring cert they don\'t know about.',
+    'Word-of-mouth multiplier: prevents one incident, sells the next three engagements.',
   ],
 }));
 
