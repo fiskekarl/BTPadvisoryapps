@@ -1,0 +1,142 @@
+<mvc:View
+  controllerName="com.btpconsulting.subaccountlifecycle.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout"
+  xmlns:f="sap.f"
+  xmlns:core="sap.ui.core">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <!-- ─── KPI Tiles ───────────────────────────────────────────────── -->
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiTotal}"  frameType="OneByOne">
+        <TileContent unit=""><NumericContent value="{lifecycle>/summary/totalSubaccounts}" /></TileContent>
+      </GenericTile>
+      <GenericTile header="{i18n>kpiActive}" subheader="{i18n>kpiActiveSubtitle}" frameType="OneByOne">
+        <TileContent><NumericContent value="{lifecycle>/summary/activeSubaccounts}" valueColor="Good" /></TileContent>
+      </GenericTile>
+      <GenericTile header="{i18n>kpiInactive}" subheader="{i18n>kpiInactiveSubtitle}" frameType="OneByOne">
+        <TileContent><NumericContent value="{lifecycle>/summary/inactiveSubaccounts}" valueColor="Critical" /></TileContent>
+      </GenericTile>
+      <GenericTile header="{i18n>kpiStopped}" frameType="OneByOne">
+        <TileContent><NumericContent value="{lifecycle>/summary/stoppedSubaccounts}" valueColor="Neutral" /></TileContent>
+      </GenericTile>
+      <GenericTile header="{i18n>kpiDrift}" subheader="{i18n>kpiDriftSubtitle}" frameType="OneByOne">
+        <TileContent><NumericContent value="{lifecycle>/summary/driftFindings}" valueColor="Critical" /></TileContent>
+      </GenericTile>
+      <GenericTile header="{i18n>kpiAudit}" frameType="OneByOne">
+        <TileContent><NumericContent value="{lifecycle>/summary/auditEvents30d}" /></TileContent>
+      </GenericTile>
+    </l:Grid>
+
+    <!-- ─── Filter bar ─────────────────────────────────────────────── -->
+    <Toolbar>
+      <Label text="{i18n>labelTier}" />
+      <Select selectedKey="{lifecycle>/tierFilter}" change="onTierChange">
+        <items>
+          <core:Item key=""        text="{i18n>tierAll}" />
+          <core:Item key="prod"    text="{i18n>tierProd}" />
+          <core:Item key="qa"      text="{i18n>tierQa}" />
+          <core:Item key="dev"     text="{i18n>tierDev}" />
+          <core:Item key="unknown" text="{i18n>tierUnknown}" />
+        </items>
+      </Select>
+      <ToolbarSpacer />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh" press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <!-- ─── Tabs ───────────────────────────────────────────────────── -->
+    <IconTabBar id="tabs" expandable="false" stretchContentHeight="true">
+
+      <items>
+        <IconTabFilter text="{i18n>tabInventory}" key="inventory">
+          <Table id="inventoryTable" items="{lifecycle>/subaccounts}" growing="true" growingThreshold="50">
+            <columns>
+              <Column><Text text="{i18n>colSubaccount}" /></Column>
+              <Column><Text text="{i18n>colTier}" /></Column>
+              <Column><Text text="{i18n>colState}" /></Column>
+              <Column><Text text="{i18n>colEnvironment}" /></Column>
+              <Column><Text text="{i18n>colRegion}" /></Column>
+              <Column><Text text="{i18n>colCostCenter}" /></Column>
+              <Column><Text text="{i18n>colDepartment}" /></Column>
+              <Column><Text text="{i18n>colDaysInactive}" /></Column>
+              <Column><Text text="{i18n>colUsedForProd}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectIdentifier title="{lifecycle>displayName}" text="{lifecycle>subaccountId}" />
+                  <Text text="{lifecycle>tier}" />
+                  <ObjectStatus text="{lifecycle>state}"
+                                state="{= ${lifecycle>state} === 'STARTED' ? 'Success' : ${lifecycle>state} === 'STOPPED' ? 'Warning' : 'None' }" />
+                  <Text text="{lifecycle>environment}" />
+                  <Text text="{lifecycle>region}" />
+                  <Text text="{lifecycle>costCenter}" />
+                  <Text text="{lifecycle>department}" />
+                  <ObjectNumber number="{lifecycle>daysInactive}"
+                                state="{= ${lifecycle>daysInactive} >= 90 ? 'Error' : ${lifecycle>daysInactive} >= 30 ? 'Warning' : 'Success' }" />
+                  <Text text="{lifecycle>usedForProd}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabDrift}" key="drift" count="{lifecycle>/summary/driftFindings}">
+          <Table items="{lifecycle>/drift}" growing="true" growingThreshold="50">
+            <columns>
+              <Column><Text text="{i18n>colSeverity}" /></Column>
+              <Column><Text text="{i18n>colSubaccount}" /></Column>
+              <Column><Text text="{i18n>colTier}" /></Column>
+              <Column><Text text="{i18n>colResourceType}" /></Column>
+              <Column><Text text="{i18n>colSummary}" /></Column>
+              <Column><Text text="{i18n>colIgnored}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectStatus text="{lifecycle>severity}"
+                                state="{= ${lifecycle>severity} === 'error' ? 'Error' : ${lifecycle>severity} === 'warn' ? 'Warning' : 'Information' }" />
+                  <Text text="{lifecycle>subaccountId}" />
+                  <Text text="{lifecycle>tier}" />
+                  <Text text="{lifecycle>resourceType}" />
+                  <Text text="{lifecycle>summary}" />
+                  <CheckBox selected="{lifecycle>ignored}" enabled="false" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabAudit}" key="audit">
+          <Table items="{lifecycle>/audit}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colTimestamp}" /></Column>
+              <Column><Text text="{i18n>colSubaccount}" /></Column>
+              <Column><Text text="{i18n>colActor}" /></Column>
+              <Column><Text text="{i18n>colAction}" /></Column>
+              <Column><Text text="{i18n>colResource}" /></Column>
+              <Column><Text text="{i18n>colOutcome}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{lifecycle>timestamp}" />
+                  <Text text="{lifecycle>subaccountId}" />
+                  <Text text="{lifecycle>actor}" />
+                  <Text text="{lifecycle>action}" />
+                  <Text text="{lifecycle>resourceType}: {lifecycle>resourceId}" />
+                  <ObjectStatus text="{lifecycle>outcome}"
+                                state="{= ${lifecycle>outcome} === 'success' ? 'Success' : 'Error' }" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+      </items>
+    </IconTabBar>
+  </Page>
+</mvc:View>

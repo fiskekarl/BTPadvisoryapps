@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Role-Collection &amp; Identity Map</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>
+  .tiles-row { grid-template-columns: repeat(6, 1fr); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Role-Collection &amp; Identity Map</div>
+    <div class="right"><span>acme global account</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Role-Collection &amp; Identity Map</h1>
+    <div class="sub">User × Role-Collection × Subaccount cross-tabulation with toxic-combo detection</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Users</div><div class="value">47</div></div>
+    <div class="tile"><div class="label">Assignments</div><div class="value" style="color:#1D2D3E">231</div></div>
+    <div class="tile"><div class="label">Role Collections</div><div class="value" style="color:#1D2D3E">84</div></div>
+    <div class="tile crit"><div class="label">Cross-Tier Users</div><div class="value">5</div></div>
+    <div class="tile crit"><div class="label">Toxic Findings</div><div class="value">3</div></div>
+    <div class="tile crit"><div class="label">Critical</div><div class="value">1</div></div>
+  </div>
+
+  <div class="toolbar">
+    <input class="search" value="🔎 Filter by user, RC, or subaccount…" />
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export Findings</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Toxic Combos <span class="badge">3</span></div>
+    <div class="tab">Users <span class="badge">47</span></div>
+    <div class="tab">Role Collections</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Severity</th><th>Policy</th><th>User</th><th>Summary</th><th>Acknowledged</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td>PROD_DEV_COCKPIT_ADMIN</td>
+          <td><div class="id">Bob Beck</div><div class="muted" style="font-size:11px">bob@acme.com</div></td>
+          <td>holds "Subaccount Administrator" in <strong>Production (prod)</strong> AND <strong>Dev (dev)</strong></td>
+          <td><span class="status muted">no</span></td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td>ADMIN_AND_AUDITOR</td>
+          <td><div class="id">Carol Christensen</div><div class="muted" style="font-size:11px">carol@acme.com</div></td>
+          <td>holds "Audit Log Auditor" in <strong>Production</strong> AND "Subaccount Administrator" in <strong>QA</strong></td>
+          <td><span class="status muted">no</span></td>
+        </tr>
+        <tr>
+          <td><span class="status warn">warn</span></td>
+          <td>PROD_DEV_DEPLOYER</td>
+          <td><div class="id">Dave Dam</div><div class="muted" style="font-size:11px">dave@acme.com</div></td>
+          <td>holds "Cloud Foundry Space Developer" in <strong>Production (prod)</strong> AND <strong>Dev (dev)</strong></td>
+          <td><span class="status info">acknowledged · expires 2026-06-30</span></td>
+        </tr>
+        <tr>
+          <td><span class="status info">info</span></td>
+          <td>DORMANT_RC</td>
+          <td class="muted">— (no user)</td>
+          <td>Role collection "Legacy Auditor v1" has 0 user assignments across all subaccounts</td>
+          <td><span class="status muted">no</span></td>
+        </tr>
+        <tr>
+          <td><span class="status info">info</span></td>
+          <td>DORMANT_RC</td>
+          <td class="muted">— (no user)</td>
+          <td>Role collection "BTP Beta Tester" has 0 user assignments in last 90 days</td>
+          <td><span class="status muted">no</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

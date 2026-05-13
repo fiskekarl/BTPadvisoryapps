@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Trust Config &amp; Cert Expiry Console</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>
+  .tiles-row { grid-template-columns: repeat(6, 1fr); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Trust Config &amp; Cert Expiry Console</div>
+    <div class="right"><span>acme global account</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Trust Config &amp; Cert Expiry</h1>
+    <div class="sub">Single pane of glass for every certificate across the BTP landscape</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Total Certs</div><div class="value">38</div></div>
+    <div class="tile crit"><div class="label">Expired</div><div class="value">1</div></div>
+    <div class="tile crit"><div class="label">Critical &lt; 14d</div><div class="value">3</div></div>
+    <div class="tile warn"><div class="label">Warning &lt; 30d</div><div class="value">5</div></div>
+    <div class="tile"><div class="label">Notice &lt; 90d</div><div class="value" style="color:#1D2D3E">12</div></div>
+    <div class="tile crit"><div class="label">Unacknowledged</div><div class="value">4</div></div>
+  </div>
+
+  <div class="toolbar">
+    <span style="font-size:12px;color:#556B82">Kind</span>
+    <select style="padding:6px 10px;border:1px solid #BCC4CB;border-radius:6px;font-size:12px;background:white"><option>All kinds</option></select>
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="table-wrap" style="border-top: 1px solid #D5DADD; margin-top: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Severity</th><th>Kind</th><th>Subaccount</th><th>Name</th><th>Subject</th>
+          <th>Expires</th><th class="num">Days</th><th>Blast Radius</th><th>Owner</th><th>Ack'd</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">expired</span></td>
+          <td>DESTINATION</td><td>QA-Old</td>
+          <td><div class="id">legacy-mq</div></td>
+          <td class="muted">CN=mq-internal.acme.local</td>
+          <td>2026-04-18</td><td class="num"><span class="num-state crit">-20</span></td>
+          <td>Legacy MQ destination → QA</td>
+          <td class="muted">—</td><td><span class="status muted">no</span></td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td>DESTINATION</td><td>Production</td>
+          <td><div class="id">crm-legacy</div></td>
+          <td class="muted">CN=crm-old.acme.local</td>
+          <td>2026-05-19</td><td class="num"><span class="num-state crit">11</span></td>
+          <td>CRM destination → production</td>
+          <td>IT Ops</td><td><span class="status muted">no</span></td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td>IAS_SAML</td><td>QA</td>
+          <td><div class="id">IAS-Trust</div></td>
+          <td class="muted">CN=acme.accounts.ondemand.com</td>
+          <td>2026-05-22</td><td class="num"><span class="num-state crit">14</span></td>
+          <td>All IAS-federated apps in QA</td>
+          <td>Identity Team</td><td><span class="status muted">no</span></td>
+        </tr>
+        <tr>
+          <td><span class="status warn">warn</span></td>
+          <td>DESTINATION</td><td>Production</td>
+          <td><div class="id">sf-success</div></td>
+          <td class="muted">CN=api.successfactors.com</td>
+          <td>2026-06-15</td><td class="num"><span class="num-state warn">38</span></td>
+          <td>SuccessFactors → production</td>
+          <td>HR IT</td><td><span class="status info">ack'd · 2026-07-01</span></td>
+        </tr>
+        <tr>
+          <td><span class="status warn">warn</span></td>
+          <td>IAS_SAML</td><td>Production</td>
+          <td><div class="id">IAS-Trust</div></td>
+          <td class="muted">CN=acme.accounts.ondemand.com</td>
+          <td>2026-07-12</td><td class="num"><span class="num-state warn">65</span></td>
+          <td>All IAS-federated apps in Production</td>
+          <td>Identity Team</td><td><span class="status muted">no</span></td>
+        </tr>
+        <tr>
+          <td><span class="status info">notice</span></td>
+          <td>XSUAA_TRUST</td><td>Dev</td>
+          <td><div class="id">sap.default</div></td>
+          <td class="muted">CN=sap.default</td>
+          <td>2027-01-01</td><td class="num"><span class="num-state ok">238</span></td>
+          <td>XSUAA trust to default IdP</td>
+          <td class="muted">—</td><td><span class="status muted">no</span></td>
+        </tr>
+        <tr>
+          <td><span class="status info">notice</span></td>
+          <td>DESTINATION</td><td>Integration</td>
+          <td><div class="id">aws-s3-events</div></td>
+          <td class="muted">CN=s3.eu-west-1.amazonaws.com</td>
+          <td>2026-08-04</td><td class="num"><span class="num-state warn">88</span></td>
+          <td>S3 event ingestion → integration</td>
+          <td>Data Eng</td><td><span class="status info">ack'd · 2026-09-01</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

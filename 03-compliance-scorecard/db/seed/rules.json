@@ -1,0 +1,56 @@
+[
+  {
+    "id":          "PROD_REQUIRES_LABEL_COSTCENTER",
+    "title":       "Production subaccounts must carry a costCenter label",
+    "description": "All subaccounts marked usedForProduction must have a costCenter label for chargeback and FinOps governance.",
+    "category":    "governance",
+    "severity":    "error",
+    "kind":        "label-required",
+    "paramsJson":  "{ \"scope\": \"prod\", \"label\": \"costCenter\" }"
+  },
+  {
+    "id":          "PROD_REQUIRES_LABEL_DEPARTMENT",
+    "title":       "Production subaccounts must carry a department label",
+    "description": "Mirror of costCenter but for org-chart attribution.",
+    "category":    "governance",
+    "severity":    "warn",
+    "kind":        "label-required",
+    "paramsJson":  "{ \"scope\": \"prod\", \"label\": \"department\" }"
+  },
+  {
+    "id":          "PROD_NO_BASIC_AUTH",
+    "title":       "Production destinations must not use BasicAuthentication",
+    "description": "BasicAuth is forbidden in production. Use OAuth2*, ClientCertificate, or Principal Propagation.",
+    "category":    "identity",
+    "severity":    "error",
+    "kind":        "destination-auth-forbidden",
+    "paramsJson":  "{ \"scope\": \"prod\", \"forbidden\": [\"BasicAuthentication\"] }"
+  },
+  {
+    "id":          "INACTIVE_SUBACCOUNT_90D",
+    "title":       "No subaccount should be inactive for 90+ days",
+    "description": "Inactive subaccounts incur cost and create an unowned attack surface. Decommission or document a clear reason.",
+    "category":    "cost",
+    "severity":    "warn",
+    "kind":        "max-days-inactive",
+    "paramsJson":  "{ \"maxDays\": 90 }"
+  },
+  {
+    "id":          "TIER_NAMING_CONVENTION",
+    "title":       "Subaccount displayName must indicate tier",
+    "description": "displayName should contain prod / qa / dev / sandbox so cockpit users know the environment at a glance.",
+    "category":    "governance",
+    "severity":    "info",
+    "kind":        "name-pattern",
+    "paramsJson":  "{ \"pattern\": \"(prod|qa|test|dev|sandbox)\", \"flags\": \"i\" }"
+  },
+  {
+    "id":          "MFA_FOR_ADMIN_ROLE_COLLECTIONS",
+    "title":       "Admin role collections must require MFA",
+    "description": "IAS authentication policy must enforce MFA for any role-collection containing 'Admin'.",
+    "category":    "identity",
+    "severity":    "error",
+    "kind":        "mfa-for-admin-rcs",
+    "paramsJson":  "{}"
+  }
+]

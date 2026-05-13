@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-role-collection-map",
+  "tenant-mode": "dedicated",
+  "description": "BTP Role-Collection & Identity Map — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.RoleViewer", "description": "Read role-collection map and toxic-combo findings" },
+    { "name": "$XSAPPNAME.RoleAdmin",  "description": "Manage toxic-combo policies and ignore-rules" }
+  ],
+  "role-templates": [
+    { "name": "RoleViewer", "description": "View role-collection map",
+      "scope-references": ["$XSAPPNAME.RoleViewer"] },
+    { "name": "RoleAdmin",  "description": "Viewer + edit toxic-combo policies",
+      "scope-references": ["$XSAPPNAME.RoleViewer", "$XSAPPNAME.RoleAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP Role Map Viewer",
+      "description": "Read-only access to the Role-Collection & Identity Map",
+      "role-template-references": ["$XSAPPNAME.RoleViewer"] },
+    { "name": "BTP Role Map Administrator",
+      "description": "Full access including policy editing",
+      "role-template-references": ["$XSAPPNAME.RoleAdmin"] }
+  ]
+}

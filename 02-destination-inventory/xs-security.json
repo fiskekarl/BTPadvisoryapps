@@ -1,0 +1,31 @@
+{
+  "xsappname": "btp-destination-inventory",
+  "tenant-mode": "dedicated",
+  "description": "BTP Destination & Connectivity Inventory — XSUAA security descriptor",
+
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+
+  "scopes": [
+    { "name": "$XSAPPNAME.DestInvViewer", "description": "Read destination inventory and findings" },
+    { "name": "$XSAPPNAME.DestInvAdmin",  "description": "Manage scan policies and ignore-rules" }
+  ],
+
+  "role-templates": [
+    { "name": "DestInvViewer", "description": "View destination inventory and risk findings",
+      "scope-references": ["$XSAPPNAME.DestInvViewer"] },
+    { "name": "DestInvAdmin",  "description": "Viewer + edit scan policies and ignore-rules",
+      "scope-references": ["$XSAPPNAME.DestInvViewer", "$XSAPPNAME.DestInvAdmin"] }
+  ],
+
+  "role-collections": [
+    { "name": "BTP Destination Inventory Viewer",
+      "description": "Read-only access to the Destination & Connectivity Inventory",
+      "role-template-references": ["$XSAPPNAME.DestInvViewer"] },
+    { "name": "BTP Destination Inventory Administrator",
+      "description": "Full access to the Destination & Connectivity Inventory",
+      "role-template-references": ["$XSAPPNAME.DestInvAdmin"] }
+  ]
+}

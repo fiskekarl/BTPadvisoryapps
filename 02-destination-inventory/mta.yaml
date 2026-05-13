@@ -1,0 +1,144 @@
+_schema-version: '3.1'
+ID: btp-destination-inventory
+version: 1.0.0
+description: SAP BTP Destination & Connectivity Inventory — advisory app
+
+parameters:
+  enable-parallel-deployments: true
+  deploy_mode: html5-repo
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production
+        - echo "omit=dev" > gen/srv/.npmrc
+        - npm ci --prefix app/destination-dashboard
+
+modules:
+
+  - name: destinv-ui
+    type: html5
+    path: app/destination-dashboard
+    build-parameters:
+      builder: custom
+      commands:
+        - npm run build
+      supported-platforms: []
+
+  - name: destinv-ui-deployer
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: destinv-html5-repo-host
+        parameters:
+          content-target: true
+    build-parameters:
+      build-result: resources/
+      requires:
+        - name: destinv-ui
+          artifacts:
+            - destination-dashboard.zip
+          target-path: resources/
+
+  - name: destinv-srv
+    type: nodejs
+    path: gen/srv
+    parameters:
+      memory: 512M
+      disk-quota: 1024M
+      instances: 1
+    requires:
+      - name: destinv-xsuaa
+      - name: destinv-cis
+      - name: destinv-destination
+    provides:
+      - name: destinv-srv-api
+        public: true
+        properties:
+          srv-url: ${default-url}
+
+  - name: destinv-destination-content
+    type: com.sap.application.content
+    requires:
+      - name: destinv-destination-service
+        parameters:
+          content-target: true
+      - name: destinv-xsuaa
+        parameters:
+          service-key:
+            name: destinv-xsuaa-key
+      - name: destinv-html5-repo-host
+        parameters:
+          service-key:
+            name: destinv-html5-repo-host-key
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Authentication: OAuth2UserTokenExchange
+              Name: destinv-srv-destination
+              HTML5.ForwardAuthToken: true
+              TokenServiceInstanceName: destinv-xsuaa
+              TokenServiceKeyName: destinv-xsuaa-key
+              URL: ~{destinv-srv-api/srv-url}
+              sap.cloud.service: com.btpconsulting.destinationinventory
+          existing_destinations_policy: update
+    build-parameters:
+      no-source: true
+
+resources:
+
+  - name: destinv-xsuaa
+    type: com.sap.xs.uaa
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: btp-destination-inventory-${org}-${space}
+        tenant-mode: dedicated
+
+  # CIS — for subaccount enumeration; we walk every subaccount and read its
+  # destinations via Destination Service instance + service-keys.
+  - name: destinv-cis
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: cis
+      service-plan: central
+
+  # Subaccount-bound destination service. Note: this binding gives access to
+  # destinations in THIS subaccount only. For a full global-account inventory
+  # the consultant must create a destination service-key per subaccount during
+  # client deploy and inject the keys via DESTINATION_KEYS env var (see
+  # README for runbook).
+  - name: destinv-destination
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+
+  - name: destinv-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            existing_destinations_policy: update
+            destinations:
+              - Name: ui5
+                Description: SAP UI5 CDN
+                URL: https://ui5.sap.com
+                Type: HTTP
+                ProxyType: Internet
+                Authentication: NoAuthentication
+
+  - name: destinv-html5-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-host

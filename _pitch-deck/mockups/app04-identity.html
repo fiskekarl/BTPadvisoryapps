@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>CIS/IAS Identity Federation Health Check</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>
+  .tiles-row { grid-template-columns: repeat(6, 1fr); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">CIS/IAS Identity Federation Health</div>
+    <div class="right"><span>acme.accounts.ondemand.com</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Identity Federation Health</h1>
+    <div class="sub">CIS/IAS federation, MFA policy, dormant accounts, and trust expiry</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">IAS Apps</div><div class="value">24</div></div>
+    <div class="tile crit"><div class="label">Without MFA</div><div class="value">3</div></div>
+    <div class="tile"><div class="label">Trust Configs</div><div class="value" style="color:#1D2D3E">12</div></div>
+    <div class="tile crit"><div class="label">Trusts &lt; 60d</div><div class="value">2</div></div>
+    <div class="tile warn"><div class="label">Dormant Users</div><div class="value">8</div></div>
+    <div class="tile crit"><div class="label">Critical Findings</div><div class="value">5</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Trust Configurations</div>
+    <div class="tab">App Policies <span class="badge">24</span></div>
+    <div class="tab">Dormant Users <span class="badge">8</span></div>
+    <div class="tab">Findings <span class="badge">11</span></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Subaccount</th><th>Trust</th><th>Type</th><th>Issuer</th><th>Cert Expires</th><th class="num">Days</th><th>Enabled</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Production</td>
+          <td><div class="id">IAS-Trust</div></td>
+          <td><span class="status info">OIDC</span></td>
+          <td class="muted">https://acme.accounts.ondemand.com</td>
+          <td>2026-07-12</td><td class="num"><span class="num-state warn">65</span></td>
+          <td><span class="status ok">✓</span></td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td>QA</td>
+          <td><div class="id">IAS-Trust</div></td>
+          <td><span class="status info">OIDC</span></td>
+          <td class="muted">https://acme.accounts.ondemand.com</td>
+          <td>2026-05-22</td><td class="num"><span class="num-state crit">14</span></td>
+          <td><span class="status ok">✓</span></td>
+        </tr>
+        <tr>
+          <td>Dev</td>
+          <td><div class="id">SAP-IDS</div></td>
+          <td><span class="status info">SAML</span></td>
+          <td class="muted">https://accounts.sap.com</td>
+          <td class="muted">—</td><td class="num muted">—</td>
+          <td><span class="status ok">✓</span></td>
+        </tr>
+        <tr>
+          <td>Integration</td>
+          <td><div class="id">azure-ad-prod</div></td>
+          <td><span class="status info">OIDC</span></td>
+          <td class="muted">https://login.microsoftonline.com/…</td>
+          <td>2027-03-08</td><td class="num"><span class="num-state ok">305</span></td>
+          <td><span class="status ok">✓</span></td>
+        </tr>
+        <tr>
+          <td>Analytics</td>
+          <td><div class="id">IAS-Trust</div></td>
+          <td><span class="status info">OIDC</span></td>
+          <td class="muted">https://acme.accounts.ondemand.com</td>
+          <td>2026-07-12</td><td class="num"><span class="num-state warn">65</span></td>
+          <td><span class="status ok">✓</span></td>
+        </tr>
+        <tr>
+          <td>Sandbox</td>
+          <td><div class="id">internal-test</div></td>
+          <td><span class="status muted">Internal</span></td>
+          <td class="muted">acme.accounts.ondemand.com</td>
+          <td class="muted">—</td><td class="num muted">—</td>
+          <td><span class="status muted">✗ disabled</span></td>
+        </tr>
+        <tr>
+          <td>Portal</td>
+          <td><div class="id">azure-ad-corp</div></td>
+          <td><span class="status info">OIDC</span></td>
+          <td class="muted">https://login.microsoftonline.com/…</td>
+          <td>2027-01-15</td><td class="num"><span class="num-state ok">253</span></td>
+          <td><span class="status ok">✓</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "role-dashboard-ui",
+  "version": "1.0.0",
+  "description": "BTP Role-Collection & Identity Map SAPUI5 frontend",
+  "private": true,
+  "scripts": {
+    "start": "ui5 serve --open index.html",
+    "build": "ui5 build --all --clean-dest",
+    "lint": "eslint webapp"
+  },
+  "devDependencies": { "@ui5/cli": "^3", "ui5-task-zipper": "^3" }
+}

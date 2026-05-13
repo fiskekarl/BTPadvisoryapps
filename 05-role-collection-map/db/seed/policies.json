@@ -1,0 +1,35 @@
+[
+  {
+    "id": "PROD_DEV_COCKPIT_ADMIN",
+    "title": "Same human is Cockpit Admin in prod AND dev",
+    "description": "Separation-of-duties: deploy access to production should not be combined with experimental access in dev/sandbox.",
+    "rcA": "Subaccount Administrator",
+    "tierA": "prod",
+    "rcB": "Subaccount Administrator",
+    "tierB": "dev",
+    "severity": "error",
+    "enabled": true
+  },
+  {
+    "id": "PROD_DEV_DEPLOYER",
+    "title": "Same human can deploy MTAs to prod AND dev",
+    "description": "Deploy rights in production should be a separate human from deploy rights in dev to avoid accidental cross-environment pushes.",
+    "rcA": "Cloud Foundry Space Developer",
+    "tierA": "prod",
+    "rcB": "Cloud Foundry Space Developer",
+    "tierB": "dev",
+    "severity": "warn",
+    "enabled": true
+  },
+  {
+    "id": "ADMIN_AND_AUDITOR",
+    "title": "Same human is both Admin and Auditor",
+    "description": "Auditors must not have admin rights — defeats the purpose of independent audit.",
+    "rcA": "Subaccount Administrator",
+    "tierA": "*",
+    "rcB": "Audit Log Auditor",
+    "tierB": "*",
+    "severity": "error",
+    "enabled": true
+  }
+]

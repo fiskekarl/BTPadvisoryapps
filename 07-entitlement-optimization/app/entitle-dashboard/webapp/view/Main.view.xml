@@ -1,0 +1,101 @@
+<mvc:View
+  controllerName="com.btpconsulting.entitlement.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout"
+  xmlns:core="sap.ui.core">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiEntitlements}" frameType="OneByOne"><TileContent><NumericContent value="{entitle>/summary/totalEntitlements}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiUnder}"        frameType="OneByOne"><TileContent><NumericContent value="{entitle>/summary/underutilized}"     valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiOver}"         frameType="OneByOne"><TileContent><NumericContent value="{entitle>/summary/overutilized}"      valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiRenewals}"     frameType="OneByOne"><TileContent><NumericContent value="{entitle>/summary/renewalsNext60d}"   valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiSaving}"       frameType="OneByOne"><TileContent unit="{entitle>/summary/currency}"><NumericContent value="{entitle>/summary/estimatedAnnualSaving}" valueColor="Good" formatterValue="false" /></TileContent></GenericTile>
+      <GenericTile header="Headroom Forecast"      frameType="OneByOne"><TileContent unit="months"><NumericContent value="{entitle>/months}" /></TileContent></GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <Label text="{i18n>labelWindow}" />
+      <Select selectedKey="{entitle>/months}" change="onWindowChange">
+        <items>
+          <core:Item key="6"  text="Last 6 months" />
+          <core:Item key="12" text="Last 12 months" />
+          <core:Item key="24" text="Last 24 months" />
+        </items>
+      </Select>
+      <ToolbarSpacer />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <IconTabBar id="tabs" expandable="false" stretchContentHeight="true">
+      <items>
+        <IconTabFilter text="{i18n>tabAll}" key="all">
+          <Table items="{entitle>/entitlements}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colService}" /></Column>
+              <Column><Text text="{i18n>colPlan}" /></Column>
+              <Column><Text text="{i18n>colUnit}" /></Column>
+              <Column><Text text="{i18n>colEntitled}" /></Column>
+              <Column><Text text="{i18n>colAvg}" /></Column>
+              <Column><Text text="{i18n>colPeak}" /></Column>
+              <Column><Text text="{i18n>colUtilization}" /></Column>
+              <Column><Text text="{i18n>colRecommendation}" /></Column>
+              <Column><Text text="{i18n>colSuggested}" /></Column>
+              <Column><Text text="{i18n>colSaving}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectIdentifier title="{entitle>serviceName}" text="{entitle>category}" />
+                  <Text text="{entitle>planName}" />
+                  <Text text="{entitle>unit}" />
+                  <Text text="{= ${entitle>unlimited} ? 'Unlimited' : ${entitle>entitled} }" />
+                  <Text text="{entitle>avgUsage}" />
+                  <Text text="{entitle>peakUsage}" />
+                  <ObjectNumber number="{entitle>utilizationPct}" unit="%"
+                                state="{= ${entitle>utilizationPct} == 0 ? 'None' : ${entitle>utilizationPct} &lt; 35 ? 'Warning' : ${entitle>utilizationPct} &gt; 85 ? 'Error' : 'Success' }" />
+                  <ObjectStatus text="{entitle>recommendation}"
+                                state="{= ${entitle>recommendation} === 'DOWNGRADE' ? 'Warning' : ${entitle>recommendation} === 'INVESTIGATE' ? 'Error' : 'Success' }" />
+                  <Text text="{= ${entitle>suggestedQuota} || '—' }" />
+                  <ObjectNumber number="{entitle>annualSaving}" unit="{entitle>currency}"
+                                state="{= ${entitle>annualSaving} > 0 ? 'Success' : 'None' }" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabRenewals}" key="renewals" count="{entitle>/summary/renewalsNext60d}">
+          <Table items="{entitle>/renewals}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colService}" /></Column>
+              <Column><Text text="{i18n>colPlan}" /></Column>
+              <Column><Text text="{i18n>colRenewal}" /></Column>
+              <Column><Text text="{i18n>colDaysToRenewal}" /></Column>
+              <Column><Text text="{i18n>colRecommendation}" /></Column>
+              <Column><Text text="{i18n>colSaving}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectIdentifier title="{entitle>serviceName}" />
+                  <Text text="{entitle>planName}" />
+                  <Text text="{entitle>renewalDate}" />
+                  <ObjectNumber number="{entitle>daysToRenewal}"
+                                state="{= ${entitle>daysToRenewal} &lt;= 30 ? 'Error' : ${entitle>daysToRenewal} &lt;= 90 ? 'Warning' : 'Success' }" />
+                  <ObjectStatus text="{entitle>recommendation}"
+                                state="{= ${entitle>recommendation} === 'DOWNGRADE' ? 'Warning' : ${entitle>recommendation} === 'INVESTIGATE' ? 'Error' : 'Success' }" />
+                  <ObjectNumber number="{entitle>annualSaving}" unit="{entitle>currency}"
+                                state="{= ${entitle>annualSaving} > 0 ? 'Success' : 'None' }" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+      </items>
+    </IconTabBar>
+  </Page>
+</mvc:View>

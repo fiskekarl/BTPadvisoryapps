@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-compliance-scorecard",
+  "tenant-mode": "dedicated",
+  "description": "BTP Architecture Compliance Scorecard — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.ScoreViewer", "description": "Read scorecard, rules, and findings" },
+    { "name": "$XSAPPNAME.ScoreAdmin",  "description": "Edit rules, run scans, export deck" }
+  ],
+  "role-templates": [
+    { "name": "ScoreViewer", "description": "View scores and findings",
+      "scope-references": ["$XSAPPNAME.ScoreViewer"] },
+    { "name": "ScoreAdmin",  "description": "Edit rules and trigger scans",
+      "scope-references": ["$XSAPPNAME.ScoreViewer", "$XSAPPNAME.ScoreAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP Compliance Scorecard Viewer",
+      "description": "Read-only access to scorecard and findings",
+      "role-template-references": ["$XSAPPNAME.ScoreViewer"] },
+    { "name": "BTP Compliance Scorecard Administrator",
+      "description": "Full access including rule editing",
+      "role-template-references": ["$XSAPPNAME.ScoreAdmin"] }
+  ]
+}

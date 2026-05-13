@@ -1,0 +1,125 @@
+<mvc:View
+  controllerName="com.btpconsulting.identityfederation.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiApps}"      frameType="OneByOne"><TileContent><NumericContent value="{ident>/summary/iasApps}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiNoMfa}"     frameType="OneByOne"><TileContent><NumericContent value="{ident>/summary/appsWithoutMfa}" valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiTrusts}"    frameType="OneByOne"><TileContent><NumericContent value="{ident>/summary/trustConfigs}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiTrustsExp}" frameType="OneByOne"><TileContent><NumericContent value="{ident>/summary/trustsExpiring60d}" valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiDormant}"   frameType="OneByOne"><TileContent><NumericContent value="{ident>/summary/dormantUsers}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiFindings}"  frameType="OneByOne"><TileContent><NumericContent value="{ident>/summary/findings}" valueColor="Error" /></TileContent></GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <ToolbarSpacer />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <IconTabBar id="tabs" expandable="false" stretchContentHeight="true">
+      <items>
+        <IconTabFilter text="{i18n>tabTrusts}" key="trusts">
+          <Table items="{ident>/trusts}" growing="true" growingThreshold="50">
+            <columns>
+              <Column><Text text="{i18n>colSubaccount}" /></Column>
+              <Column><Text text="{i18n>colTrust}" /></Column>
+              <Column><Text text="{i18n>colType}" /></Column>
+              <Column><Text text="{i18n>colCertExp}" /></Column>
+              <Column><Text text="{i18n>colDays}" /></Column>
+              <Column><Text text="{i18n>colEnabled}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{ident>subaccountName}" />
+                  <Text text="{ident>trustName}" />
+                  <Text text="{ident>type}" />
+                  <Text text="{ident>certNotAfter}" />
+                  <ObjectNumber number="{ident>daysToExpiry}"
+                                state="{= ${ident>daysToExpiry} == null ? 'None' : ${ident>daysToExpiry} &lt;= 14 ? 'Error' : ${ident>daysToExpiry} &lt;= 60 ? 'Warning' : 'Success' }" />
+                  <CheckBox selected="{ident>enabled}" enabled="false" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabApps}" key="apps">
+          <Table items="{ident>/apps}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colApp}" /></Column>
+              <Column><Text text="{i18n>colMfa}" /></Column>
+              <Column><Text text="{i18n>colRiskBased}" /></Column>
+              <Column><Text text="{i18n>colForwarding}" /></Column>
+              <Column><Text text="{i18n>colDescription}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectIdentifier title="{ident>appName}" text="{ident>appId}" />
+                  <ObjectStatus text="{= ${ident>mfaEnforced} === true ? 'On' : ${ident>mfaEnforced} === false ? 'Off' : '?' }"
+                                state="{= ${ident>mfaEnforced} === true ? 'Success' : ${ident>mfaEnforced} === false ? 'Error' : 'None' }" />
+                  <CheckBox selected="{ident>riskBasedEnabled}" enabled="false" />
+                  <Text text="{ident>forwardingTo}" />
+                  <Text text="{ident>description}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabDormant}" key="dormant" count="{ident>/summary/dormantUsers}">
+          <Table items="{ident>/dormant}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colUser}" /></Column>
+              <Column><Text text="{i18n>colEmail}" /></Column>
+              <Column><Text text="{i18n>colLastLogin}" /></Column>
+              <Column><Text text="{i18n>colDaysSinceLogin}" /></Column>
+              <Column><Text text="{i18n>colStatus}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{ident>displayName}" />
+                  <Text text="{ident>email}" />
+                  <Text text="{ident>lastLogin}" />
+                  <ObjectNumber number="{ident>daysSinceLogin}"
+                                state="{= ${ident>daysSinceLogin} &gt;= 180 ? 'Error' : ${ident>daysSinceLogin} &gt;= 90 ? 'Warning' : 'Success' }" />
+                  <ObjectStatus text="{ident>status}"
+                                state="{= ${ident>status} === 'active' ? 'Warning' : 'Information' }" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabFindings}" key="findings" count="{ident>/summary/findings}">
+          <Table items="{ident>/findings}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colSeverity}" /></Column>
+              <Column><Text text="{i18n>colCode}" /></Column>
+              <Column><Text text="{i18n>colTarget}" /></Column>
+              <Column><Text text="{i18n>colSummary}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectStatus text="{ident>severity}"
+                                state="{= ${ident>severity} === 'error' ? 'Error' : ${ident>severity} === 'warn' ? 'Warning' : 'Information' }" />
+                  <Text text="{ident>code}" />
+                  <Text text="{ident>target}" />
+                  <Text text="{ident>summary}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+      </items>
+    </IconTabBar>
+  </Page>
+</mvc:View>

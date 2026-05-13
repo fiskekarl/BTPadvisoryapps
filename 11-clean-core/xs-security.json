@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-clean-core",
+  "tenant-mode": "dedicated",
+  "description": "BTP Clean Core Compliance Dashboard — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.CleanCoreViewer", "description": "Read clean-core scan results" },
+    { "name": "$XSAPPNAME.CleanCoreAdmin",  "description": "Manage scanner config and policies" }
+  ],
+  "role-templates": [
+    { "name": "CleanCoreViewer", "description": "View extension scan results",
+      "scope-references": ["$XSAPPNAME.CleanCoreViewer"] },
+    { "name": "CleanCoreAdmin",  "description": "Viewer + manage scanner config",
+      "scope-references": ["$XSAPPNAME.CleanCoreViewer", "$XSAPPNAME.CleanCoreAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP Clean Core Viewer",
+      "description": "Read-only access to clean-core compliance findings",
+      "role-template-references": ["$XSAPPNAME.CleanCoreViewer"] },
+    { "name": "BTP Clean Core Administrator",
+      "description": "Manage scanner configuration and policies",
+      "role-template-references": ["$XSAPPNAME.CleanCoreAdmin"] }
+  ]
+}

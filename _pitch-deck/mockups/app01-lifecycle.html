@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Subaccount Lifecycle &amp; Drift Tracker</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>
+  .tiles-row { grid-template-columns: repeat(6, 1fr); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Subaccount Lifecycle &amp; Drift Tracker</div>
+    <div class="right"><span>acme global account</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Subaccount Lifecycle</h1>
+    <div class="sub">Inventory, drift, and audit-trail across the BTP global account</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Total Subaccounts</div><div class="value">12</div></div>
+    <div class="tile ok"><div class="label">Active</div><div class="value">7</div><div class="sub">Activity in last 30 days</div></div>
+    <div class="tile crit"><div class="label">Inactive</div><div class="value">2</div><div class="sub">No activity 90+ days</div></div>
+    <div class="tile"><div class="label">Stopped</div><div class="value" style="color:#8396A8">3</div></div>
+    <div class="tile crit"><div class="label">Drift Findings</div><div class="value">8</div><div class="sub">Open (not ignored)</div></div>
+    <div class="tile"><div class="label">Audit Events (30d)</div><div class="value" style="color:#1D2D3E">487</div></div>
+  </div>
+
+  <div class="toolbar">
+    <span style="font-size:12px;color:#556B82">Tier</span>
+    <select style="padding:6px 10px;border:1px solid #BCC4CB;border-radius:6px;font-size:12px;background:white"><option>All tiers</option></select>
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Inventory</div>
+    <div class="tab">Drift <span class="badge">8</span></div>
+    <div class="tab">Audit Trail</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Subaccount</th><th>Tier</th><th>State</th><th>Environment</th><th>Region</th>
+          <th>Cost Center</th><th>Department</th><th class="num">Days Inactive</th><th>Production Use</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="id">Production</div><div class="muted" style="font-size:11px">a8b3c2d1-...</div></td>
+          <td>prod</td><td><span class="status ok">STARTED</span></td><td>CF</td><td>eu10</td>
+          <td>CC-1001</td><td>IT Operations &amp; Infrastructure</td><td class="num"><span class="num-state ok">0</span></td><td>USED_FOR_PRODUCTION</td>
+        </tr>
+        <tr>
+          <td><div class="id">QA</div><div class="muted" style="font-size:11px">b1c4d2e3-...</div></td>
+          <td>qa</td><td><span class="status ok">STARTED</span></td><td>CF</td><td>eu10</td>
+          <td>CC-1002</td><td>Software Engineering</td><td class="num"><span class="num-state ok">2</span></td><td>NOT_USED_FOR_PRODUCTION</td>
+        </tr>
+        <tr>
+          <td><div class="id">Dev</div><div class="muted" style="font-size:11px">c5d2e1f4-...</div></td>
+          <td>dev</td><td><span class="status ok">STARTED</span></td><td>CF</td><td>eu10</td>
+          <td>CC-1002</td><td>Software Engineering</td><td class="num"><span class="num-state ok">0</span></td><td>NOT_USED_FOR_PRODUCTION</td>
+        </tr>
+        <tr>
+          <td><div class="id">Integration</div><div class="muted" style="font-size:11px">d4e3f2g1-...</div></td>
+          <td>prod</td><td><span class="status ok">STARTED</span></td><td>Kyma</td><td>eu10</td>
+          <td>CC-1004</td><td>Enterprise Architecture</td><td class="num"><span class="num-state ok">5</span></td><td>USED_FOR_PRODUCTION</td>
+        </tr>
+        <tr>
+          <td><div class="id">Sandbox</div><div class="muted" style="font-size:11px">e3f2g1h4-...</div></td>
+          <td>dev</td><td><span class="status ok">STARTED</span></td><td>CF</td><td>eu10</td>
+          <td class="muted">—</td><td class="muted">— missing label</td>
+          <td class="num"><span class="num-state crit">120</span></td><td>NOT_USED_FOR_PRODUCTION</td>
+        </tr>
+        <tr>
+          <td><div class="id">QA-Old</div><div class="muted" style="font-size:11px">f2g1h4i3-...</div></td>
+          <td>qa</td><td><span class="status warn">STOPPED</span></td><td>CF</td><td>eu10</td>
+          <td>CC-1002</td><td>Software Engineering</td><td class="num"><span class="num-state crit">200</span></td><td>NOT_USED_FOR_PRODUCTION</td>
+        </tr>
+        <tr>
+          <td><div class="id">Analytics</div><div class="muted" style="font-size:11px">g1h4i3j2-...</div></td>
+          <td>prod</td><td><span class="status ok">STARTED</span></td><td>CF</td><td>eu10</td>
+          <td>CC-1003</td><td>Finance &amp; Business Intelligence</td><td class="num"><span class="num-state ok">1</span></td><td>USED_FOR_PRODUCTION</td>
+        </tr>
+        <tr>
+          <td><div class="id">Portal</div><div class="muted" style="font-size:11px">h4i3j2k1-...</div></td>
+          <td>prod</td><td><span class="status ok">STARTED</span></td><td>CF</td><td>eu10</td>
+          <td>CC-1005</td><td>Digital Workplace</td><td class="num"><span class="num-state ok">0</span></td><td>USED_FOR_PRODUCTION</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

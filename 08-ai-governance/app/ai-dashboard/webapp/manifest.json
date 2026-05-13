@@ -1,0 +1,42 @@
+{
+  "_version": "1.65.0",
+  "sap.app": {
+    "id": "com.btpconsulting.aigovernance",
+    "type": "application",
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "applicationVersion": { "version": "1.0.0" },
+    "dataSources": {
+      "AiService": { "uri": "odata/v4/ai/", "type": "OData",
+                     "settings": { "odataVersion": "4.0" } }
+    },
+    "i18n": "i18n/i18n.properties",
+    "ach": "CA-BTP"
+  },
+  "sap.ui": { "technology": "UI5", "icons": { "icon": "sap-icon://artificial-intelligence" }, "fullWidth": true,
+              "supportedThemes": ["sap_horizon", "sap_fiori_3"] },
+  "sap.ui5": {
+    "flexEnabled": true,
+    "rootView": { "viewName": "com.btpconsulting.aigovernance.view.App", "type": "XML", "async": true, "id": "app" },
+    "dependencies": {
+      "minUI5Version": "1.120.0",
+      "libs": { "sap.m": {}, "sap.ui.core": {}, "sap.ui.layout": {}, "sap.suite.ui.commons": {}, "sap.ui.export": {} }
+    },
+    "contentDensities": { "compact": true, "cozy": true },
+    "models": {
+      "i18n": { "type": "sap.ui.model.resource.ResourceModel",
+                "settings": { "bundleName": "com.btpconsulting.aigovernance.i18n.i18n" } },
+      "ai": { "type": "sap.ui.model.json.JSONModel",
+              "settings": { "data": { "summary": {}, "deployments": [], "configs": [], "spend": [], "alerts": [], "busy": false } } }
+    },
+    "routing": {
+      "config": { "routerClass": "sap.m.routing.Router", "viewType": "XML",
+                  "viewPath": "com.btpconsulting.aigovernance.view",
+                  "controlId": "app", "controlAggregation": "pages", "async": true },
+      "routes":  [{ "name": "main", "pattern": "", "target": ["main"] }],
+      "targets": { "main": { "viewName": "Main", "viewLevel": 0 } }
+    }
+  },
+  "sap.fiori": { "registrationIds": ["F_BTP_AIGOV_001"], "archeType": "analytical" },
+  "sap.cloud": { "public": true, "service": "com.btpconsulting.aigovernance" }
+}

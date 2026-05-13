@@ -1,0 +1,79 @@
+<mvc:View
+  controllerName="com.btpconsulting.costallocation.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiTotal}"      frameType="OneByOne"><TileContent unit="EUR"><NumericContent value="{cost>/summary/totalCost}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiAllocated}"  frameType="OneByOne"><TileContent unit="%"><NumericContent value="{cost>/summary/allocatedPct}" valueColor="Good" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiBUs}"        frameType="OneByOne"><TileContent><NumericContent value="{cost>/summary/businessUnits}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiCC}"         frameType="OneByOne"><TileContent><NumericContent value="{cost>/summary/costCenters}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiDept}"       frameType="OneByOne"><TileContent><NumericContent value="{cost>/summary/departments}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiUnalloc}"    frameType="OneByOne"><TileContent unit="EUR"><NumericContent value="{cost>/summary/unallocatedCost}" valueColor="Critical" /></TileContent></GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <Label text="{i18n>labelMonth}" />
+      <Input value="{cost>/yearMonth}" placeholder="YYYY-MM" width="120px" />
+      <ToolbarSpacer />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <IconTabBar id="tabs" expandable="false" stretchContentHeight="true">
+      <items>
+        <IconTabFilter text="{i18n>tabInvoices}" key="invoices">
+          <Table items="{cost>/invoices}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colCostCenter}" /></Column>
+              <Column><Text text="{i18n>colBu}" /></Column>
+              <Column><Text text="{i18n>colDept}" /></Column>
+              <Column><Text text="{i18n>colDirect}" /></Column>
+              <Column><Text text="{i18n>colShared}" /></Column>
+              <Column><Text text="{i18n>colTotal}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectIdentifier title="{cost>costCenter}" />
+                  <Text text="{cost>buName}" />
+                  <Text text="{cost>department}" />
+                  <ObjectNumber number="{cost>directCost}" unit="{cost>currency}" />
+                  <ObjectNumber number="{cost>sharedCost}" unit="{cost>currency}" />
+                  <ObjectNumber number="{cost>totalCost}"  unit="{cost>currency}" emphasized="true" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabTree}" key="tree">
+          <Table items="{cost>/tree}" growing="true" growingThreshold="200">
+            <columns>
+              <Column><Text text="{i18n>colType}" /></Column>
+              <Column><Text text="{i18n>colNode}" /></Column>
+              <Column><Text text="Parent" /></Column>
+              <Column><Text text="{i18n>colCost}" /></Column>
+              <Column><Text text="{i18n>colChildren}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectStatus text="{cost>nodeType}"
+                                state="{= ${cost>nodeType} === 'bu' ? 'Information' : ${cost>nodeType} === 'product' ? 'Success' : 'None' }" />
+                  <Text text="{cost>nodeName}" />
+                  <Text text="{cost>parentId}" />
+                  <ObjectNumber number="{cost>cost}" unit="{cost>currency}" emphasized="true" />
+                  <Text text="{cost>childCount}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+      </items>
+    </IconTabBar>
+  </Page>
+</mvc:View>

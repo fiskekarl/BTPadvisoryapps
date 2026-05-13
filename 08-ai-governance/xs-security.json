@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-ai-governance",
+  "tenant-mode": "dedicated",
+  "description": "BTP AI Services Governance Console — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.AiViewer", "description": "Read AI deployments, configs, and alerts" },
+    { "name": "$XSAPPNAME.AiAdmin",  "description": "Manage content-filter policies and alerts" }
+  ],
+  "role-templates": [
+    { "name": "AiViewer", "description": "View AI governance dashboard",
+      "scope-references": ["$XSAPPNAME.AiViewer"] },
+    { "name": "AiAdmin",  "description": "Viewer + manage governance policies",
+      "scope-references": ["$XSAPPNAME.AiViewer", "$XSAPPNAME.AiAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP AI Governance Viewer",
+      "description": "Read-only access to AI services governance",
+      "role-template-references": ["$XSAPPNAME.AiViewer"] },
+    { "name": "BTP AI Governance Administrator",
+      "description": "Manage content-filter and masking governance policies",
+      "role-template-references": ["$XSAPPNAME.AiAdmin"] }
+  ]
+}

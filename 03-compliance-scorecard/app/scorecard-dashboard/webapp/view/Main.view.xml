@@ -1,0 +1,113 @@
+<mvc:View
+  controllerName="com.btpconsulting.compliancescorecard.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L3 M6 S12" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiOverallGrade}" frameType="OneByOne">
+        <TileContent><NumericContent value="{score>/scorecard/overallGrade}"
+                                     valueColor="{= ${score>/scorecard/overallGrade} === 'A' ? 'Good' : ${score>/scorecard/overallGrade} === 'B' ? 'Good' : ${score>/scorecard/overallGrade} === 'C' ? 'Critical' : 'Error' }" /></TileContent>
+      </GenericTile>
+      <GenericTile header="{i18n>kpiOverallScore}" frameType="OneByOne">
+        <TileContent unit="/100"><NumericContent value="{score>/scorecard/overallScore}" /></TileContent>
+      </GenericTile>
+      <GenericTile header="{i18n>kpiSubaccounts}" frameType="OneByOne">
+        <TileContent><NumericContent value="{score>/scorecard/subaccountCount}" /></TileContent>
+      </GenericTile>
+      <GenericTile header="{i18n>kpiRules}" frameType="OneByOne">
+        <TileContent><NumericContent value="{score>/scorecard/ruleCount}" /></TileContent>
+      </GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <ToolbarSpacer />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnRunScan}" icon="sap-icon://camera"           press="onRunScan" type="Emphasized" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <IconTabBar id="tabs" expandable="false" stretchContentHeight="true">
+      <items>
+        <IconTabFilter text="{i18n>tabPerSubaccount}" key="subaccount">
+          <Table items="{score>/scorecard/perSubaccount}" growing="true" growingThreshold="50">
+            <columns>
+              <Column><Text text="{i18n>colSubaccount}" /></Column>
+              <Column><Text text="{i18n>colGrade}" /></Column>
+              <Column><Text text="{i18n>colScore}" /></Column>
+              <Column><Text text="{i18n>colPassed}" /></Column>
+              <Column><Text text="{i18n>colFailed}" /></Column>
+              <Column><Text text="{i18n>colErrors}" /></Column>
+              <Column><Text text="{i18n>colWarns}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectIdentifier title="{score>subaccountName}" text="{score>subaccountId}" />
+                  <ObjectStatus text="{score>grade}"
+                                state="{= ${score>grade} === 'A' || ${score>grade} === 'B' ? 'Success' : ${score>grade} === 'C' ? 'Warning' : 'Error' }" />
+                  <ObjectNumber number="{score>score}" unit="/100" />
+                  <Text text="{score>passed}" />
+                  <Text text="{score>failed}" />
+                  <Text text="{score>errorCount}" />
+                  <Text text="{score>warnCount}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabFindings}" key="findings">
+          <Table items="{score>/scorecard/findings}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colStatus}" /></Column>
+              <Column><Text text="{i18n>colSeverity}" /></Column>
+              <Column><Text text="{i18n>colSubaccount}" /></Column>
+              <Column><Text text="{i18n>colRule}" /></Column>
+              <Column><Text text="{i18n>colCategory}" /></Column>
+              <Column><Text text="{i18n>colSummary}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectStatus text="{= ${score>passed} ? 'Pass' : 'Fail' }"
+                                state="{= ${score>passed} ? 'Success' : 'Error' }" />
+                  <Text text="{score>severity}" />
+                  <Text text="{score>subaccountName}" />
+                  <Text text="{score>ruleTitle}" />
+                  <Text text="{score>category}" />
+                  <Text text="{score>summary}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabRules}" key="rules">
+          <Table items="{score>/rules}" growing="true" growingThreshold="50">
+            <columns>
+              <Column><Text text="{i18n>colEnabled}" /></Column>
+              <Column><Text text="{i18n>colCategory}" /></Column>
+              <Column><Text text="{i18n>colSeverity}" /></Column>
+              <Column><Text text="{i18n>colTitle}" /></Column>
+              <Column><Text text="{i18n>colKind}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <CheckBox selected="{score>enabled}" enabled="false" />
+                  <Text text="{score>category}" />
+                  <Text text="{score>severity}" />
+                  <ObjectIdentifier title="{score>title}" text="{score>id}" />
+                  <Text text="{score>kind}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+      </items>
+    </IconTabBar>
+  </Page>
+</mvc:View>

@@ -1,0 +1,115 @@
+<mvc:View
+  controllerName="com.btpconsulting.aigovernance.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiDeployments}" frameType="OneByOne"><TileContent><NumericContent value="{ai>/summary/activeDeployments}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiModels}"      frameType="OneByOne"><TileContent><NumericContent value="{ai>/summary/modelsInUse}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiSpend}"       frameType="OneByOne"><TileContent unit="EUR"><NumericContent value="{ai>/summary/monthlySpendEur}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiNoFilter}"    frameType="OneByOne"><TileContent><NumericContent value="{ai>/summary/configsWithoutFilter}" valueColor="Error" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiNoMasking}"   frameType="OneByOne"><TileContent><NumericContent value="{ai>/summary/configsWithoutMasking}" valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiAlerts}"      frameType="OneByOne"><TileContent><NumericContent value="{ai>/summary/promptInjectionAlerts7d}" valueColor="Error" /></TileContent></GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <ToolbarSpacer />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <IconTabBar id="tabs" expandable="false" stretchContentHeight="true">
+      <items>
+        <IconTabFilter text="{i18n>tabConfigs}" key="configs" count="{ai>/summary/configsWithoutFilter}">
+          <Table items="{ai>/configs}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colTemplate}" /></Column>
+              <Column><Text text="{i18n>colScenario}" /></Column>
+              <Column><Text text="{i18n>colModel}" /></Column>
+              <Column><Text text="{i18n>colInput}" /></Column>
+              <Column><Text text="{i18n>colOutput}" /></Column>
+              <Column><Text text="{i18n>colMasking}" /></Column>
+              <Column><Text text="{i18n>colGrounding}" /></Column>
+              <Column><Text text="{i18n>colCompliant}" /></Column>
+              <Column><Text text="{i18n>colViolations}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectIdentifier title="{ai>templateName}" text="{ai>configId}" />
+                  <Text text="{ai>scenarioId}" />
+                  <Text text="{ai>modelName}" />
+                  <ObjectStatus text="{= ${ai>hasInputFilter} ? 'on' : 'off' }"
+                                state="{= ${ai>hasInputFilter} ? 'Success' : 'Error' }" />
+                  <ObjectStatus text="{= ${ai>hasOutputFilter} ? 'on' : 'off' }"
+                                state="{= ${ai>hasOutputFilter} ? 'Success' : 'Error' }" />
+                  <ObjectStatus text="{= ${ai>hasMasking} ? 'on' : 'off' }"
+                                state="{= ${ai>hasMasking} ? 'Success' : 'Error' }" />
+                  <Text text="{ai>grounding}" />
+                  <ObjectStatus text="{= ${ai>compliant} ? 'compliant' : 'non-compliant' }"
+                                state="{= ${ai>compliant} ? 'Success' : 'Error' }" />
+                  <Text text="{= ${ai>violations}.join(', ') }" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabDeployments}" key="deployments" count="{ai>/summary/activeDeployments}">
+          <Table items="{ai>/deployments}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colDep}" /></Column>
+              <Column><Text text="{i18n>colScenario}" /></Column>
+              <Column><Text text="{i18n>colModel}" /></Column>
+              <Column><Text text="{i18n>colProvider}" /></Column>
+              <Column><Text text="{i18n>colResourceGroup}" /></Column>
+              <Column><Text text="{i18n>colStatus}" /></Column>
+              <Column><Text text="{i18n>colDeployedBy}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectIdentifier title="{ai>id}" />
+                  <Text text="{ai>scenarioId}" />
+                  <Text text="{ai>modelName}" />
+                  <Text text="{ai>modelProvider}" />
+                  <Text text="{ai>resourceGroup}" />
+                  <ObjectStatus text="{ai>status}"
+                                state="{= ${ai>status} === 'RUNNING' ? 'Success' : ${ai>status} === 'STOPPED' ? 'Warning' : 'None' }" />
+                  <Text text="{ai>deployedBy}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabAlerts}" key="alerts" count="{ai>/summary/promptInjectionAlerts7d}">
+          <Table items="{ai>/alerts}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colTime}" /></Column>
+              <Column><Text text="{i18n>colDep}" /></Column>
+              <Column><Text text="{i18n>colScenario}" /></Column>
+              <Column><Text text="{i18n>colSeverity}" /></Column>
+              <Column><Text text="{i18n>colReason}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{ai>timestamp}" />
+                  <Text text="{ai>deploymentId}" />
+                  <Text text="{ai>scenario}" />
+                  <ObjectStatus text="{ai>severity}"
+                                state="{= ${ai>severity} === 'error' ? 'Error' : ${ai>severity} === 'warn' ? 'Warning' : 'Information' }" />
+                  <Text text="{ai>reason}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+      </items>
+    </IconTabBar>
+  </Page>
+</mvc:View>

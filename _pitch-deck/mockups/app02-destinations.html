@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Destination &amp; Connectivity Inventory</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>
+  .tiles-row { grid-template-columns: repeat(6, 1fr); }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Destination &amp; Connectivity Inventory</div>
+    <div class="right"><span>acme global account</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Destination Inventory</h1>
+    <div class="sub">Every destination across every subaccount with auth, certs, and risk findings</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Total Destinations</div><div class="value">47</div></div>
+    <div class="tile crit"><div class="label">Basic Auth</div><div class="value">8</div></div>
+    <div class="tile"><div class="label">On-Premise</div><div class="value" style="color:#1D2D3E">12</div></div>
+    <div class="tile crit"><div class="label">Certs &lt; 60d</div><div class="value">5</div></div>
+    <div class="tile crit"><div class="label">Certs &lt; 14d</div><div class="value">2</div></div>
+    <div class="tile crit"><div class="label">Open Findings</div><div class="value">15</div></div>
+  </div>
+
+  <div class="toolbar">
+    <input class="search" value="🔎 Search destinations…" />
+    <div class="spacer"></div>
+    <button class="btn">⚙ Edit Scan Policy</button>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Destinations</div>
+    <div class="tab">Findings <span class="badge">15</span></div>
+    <div class="tab">Acknowledged</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Subaccount</th><th>Name</th><th>Type</th><th>Proxy</th><th>Authentication</th>
+          <th>URL</th><th>Cert Expires</th><th class="num">Days</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Production</td>
+          <td><div class="id">s4-erp</div></td>
+          <td>HTTP</td><td>OnPremise</td>
+          <td><span class="status crit">BasicAuthentication</span></td>
+          <td class="muted">https://s4.acme.local</td>
+          <td class="muted">—</td><td class="num muted">—</td>
+        </tr>
+        <tr>
+          <td>Production</td>
+          <td><div class="id">sf-success</div></td>
+          <td>HTTP</td><td>Internet</td>
+          <td><span class="status ok">OAuth2ClientCredentials</span></td>
+          <td class="muted">https://api.successfactors.com</td>
+          <td>2026-06-15</td><td class="num"><span class="num-state warn">38</span></td>
+        </tr>
+        <tr>
+          <td>Production</td>
+          <td><div class="id">crm-legacy</div></td>
+          <td>HTTP</td><td>OnPremise</td>
+          <td><span class="status info">ClientCertificateAuthentication</span></td>
+          <td class="muted">https://crm-old.acme.local</td>
+          <td>2026-05-19</td><td class="num"><span class="num-state crit">11</span></td>
+        </tr>
+        <tr>
+          <td>Production</td>
+          <td><div class="id">ariba-procure</div></td>
+          <td>HTTP</td><td>Internet</td>
+          <td><span class="status ok">OAuth2SAMLBearerAssertion</span></td>
+          <td class="muted">https://api.ariba.com</td>
+          <td>2027-01-20</td><td class="num"><span class="num-state ok">258</span></td>
+        </tr>
+        <tr>
+          <td>QA</td>
+          <td><div class="id">s4-erp-qa</div></td>
+          <td>HTTP</td><td>OnPremise</td>
+          <td><span class="status crit">BasicAuthentication</span></td>
+          <td class="muted">https://s4-qa.acme.local</td>
+          <td class="muted">—</td><td class="num muted">—</td>
+        </tr>
+        <tr>
+          <td>QA</td>
+          <td><div class="id">sf-stage</div></td>
+          <td>HTTP</td><td>Internet</td>
+          <td><span class="status ok">OAuth2ClientCredentials</span></td>
+          <td class="muted">https://stage.successfactors.com</td>
+          <td>2026-09-04</td><td class="num"><span class="num-state ok">119</span></td>
+        </tr>
+        <tr>
+          <td>Dev</td>
+          <td><div class="id">mock-svc</div></td>
+          <td>HTTP</td><td>Internet</td>
+          <td><span class="status muted">NoAuthentication</span></td>
+          <td class="muted">https://mock.acme.dev</td>
+          <td class="muted">—</td><td class="num muted">—</td>
+        </tr>
+        <tr>
+          <td>Integration</td>
+          <td><div class="id">event-mesh-prod</div></td>
+          <td>HTTP</td><td>Internet</td>
+          <td><span class="status info">OAuth2ClientCredentials</span></td>
+          <td class="muted">https://emessaging.cfapps.eu10…</td>
+          <td>2026-11-30</td><td class="num"><span class="num-state ok">206</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

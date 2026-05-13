@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-identity-federation",
+  "tenant-mode": "dedicated",
+  "description": "BTP CIS/IAS Identity Federation Health Check — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.IdentViewer", "description": "Read identity federation health and findings" },
+    { "name": "$XSAPPNAME.IdentAdmin",  "description": "Manage health-check policies and ignore-rules" }
+  ],
+  "role-templates": [
+    { "name": "IdentViewer", "description": "View identity federation findings",
+      "scope-references": ["$XSAPPNAME.IdentViewer"] },
+    { "name": "IdentAdmin",  "description": "Viewer + edit policies",
+      "scope-references": ["$XSAPPNAME.IdentViewer", "$XSAPPNAME.IdentAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP Identity Federation Viewer",
+      "description": "Read-only access to identity federation health",
+      "role-template-references": ["$XSAPPNAME.IdentViewer"] },
+    { "name": "BTP Identity Federation Administrator",
+      "description": "Full access including policy editing",
+      "role-template-references": ["$XSAPPNAME.IdentAdmin"] }
+  ]
+}

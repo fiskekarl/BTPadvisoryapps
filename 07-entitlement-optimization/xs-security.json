@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-entitlement-optimization",
+  "tenant-mode": "dedicated",
+  "description": "BTP Entitlement & License Optimization Advisor — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.EntitleViewer", "description": "Read entitlement utilization and recommendations" },
+    { "name": "$XSAPPNAME.EntitleAdmin",  "description": "Manage renewal dates and contract anchors" }
+  ],
+  "role-templates": [
+    { "name": "EntitleViewer", "description": "View entitlement utilization",
+      "scope-references": ["$XSAPPNAME.EntitleViewer"] },
+    { "name": "EntitleAdmin",  "description": "Viewer + manage renewals",
+      "scope-references": ["$XSAPPNAME.EntitleViewer", "$XSAPPNAME.EntitleAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP Entitlement Optimization Viewer",
+      "description": "Read-only access to entitlement utilization and savings recommendations",
+      "role-template-references": ["$XSAPPNAME.EntitleViewer"] },
+    { "name": "BTP Entitlement Optimization Administrator",
+      "description": "Manage contract renewal dates and pricing anchors",
+      "role-template-references": ["$XSAPPNAME.EntitleAdmin"] }
+  ]
+}

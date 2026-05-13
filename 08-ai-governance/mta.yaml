@@ -1,0 +1,90 @@
+_schema-version: '3.1'
+ID: btp-ai-governance
+version: 1.0.0
+description: SAP BTP AI Services Governance Console — advisory app
+
+parameters:
+  enable-parallel-deployments: true
+  deploy_mode: html5-repo
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production
+        - echo "omit=dev" > gen/srv/.npmrc
+        - npm ci --prefix app/ai-dashboard
+
+modules:
+  - name: ai-ui
+    type: html5
+    path: app/ai-dashboard
+    build-parameters: { builder: custom, commands: [npm run build], supported-platforms: [] }
+
+  - name: ai-ui-deployer
+    type: com.sap.application.content
+    path: .
+    requires: [{ name: ai-html5-repo-host, parameters: { content-target: true } }]
+    build-parameters:
+      build-result: resources/
+      requires: [{ name: ai-ui, artifacts: [ai-dashboard.zip], target-path: resources/ }]
+
+  - name: ai-srv
+    type: nodejs
+    path: gen/srv
+    parameters: { memory: 512M, disk-quota: 1024M, instances: 1 }
+    requires:
+      - name: ai-xsuaa
+    provides:
+      - name: ai-srv-api
+        public: true
+        properties: { srv-url: ${default-url} }
+
+  - name: ai-destination-content
+    type: com.sap.application.content
+    requires:
+      - { name: ai-destination-service, parameters: { content-target: true } }
+      - { name: ai-xsuaa, parameters: { service-key: { name: ai-xsuaa-key } } }
+      - { name: ai-html5-repo-host, parameters: { service-key: { name: ai-html5-repo-host-key } } }
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Authentication: OAuth2UserTokenExchange
+              Name: ai-srv-destination
+              HTML5.ForwardAuthToken: true
+              TokenServiceInstanceName: ai-xsuaa
+              TokenServiceKeyName: ai-xsuaa-key
+              URL: ~{ai-srv-api/srv-url}
+              sap.cloud.service: com.btpconsulting.aigovernance
+          existing_destinations_policy: update
+    build-parameters: { no-source: true }
+
+resources:
+  - name: ai-xsuaa
+    type: com.sap.xs.uaa
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: btp-ai-governance-${org}-${space}
+        tenant-mode: dedicated
+
+  - name: ai-html5-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters: { service: html5-apps-repo, service-plan: app-host }
+
+  - name: ai-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            existing_destinations_policy: update
+            destinations:
+              - { Name: ui5, Description: SAP UI5 CDN, URL: https://ui5.sap.com, Type: HTTP, ProxyType: Internet, Authentication: NoAuthentication }

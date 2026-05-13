@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-audit-log",
+  "tenant-mode": "dedicated",
+  "description": "BTP Audit-Log & Change Inventory Console — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.AuditViewer", "description": "Read audit-log events and change timeline" },
+    { "name": "$XSAPPNAME.AuditAdmin",  "description": "Manage anomaly rules and saved filters" }
+  ],
+  "role-templates": [
+    { "name": "AuditViewer", "description": "View audit-log events and change inventory",
+      "scope-references": ["$XSAPPNAME.AuditViewer"] },
+    { "name": "AuditAdmin",  "description": "Viewer + manage anomaly rules",
+      "scope-references": ["$XSAPPNAME.AuditViewer", "$XSAPPNAME.AuditAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP Audit Log Viewer",
+      "description": "Read-only access to audit log and change inventory",
+      "role-template-references": ["$XSAPPNAME.AuditViewer"] },
+    { "name": "BTP Audit Log Administrator",
+      "description": "Full access including anomaly rule management",
+      "role-template-references": ["$XSAPPNAME.AuditAdmin"] }
+  ]
+}

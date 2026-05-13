@@ -1,0 +1,97 @@
+<mvc:View
+  controllerName="com.btpconsulting.rolecollectionmap.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiUsers}"        frameType="OneByOne"><TileContent><NumericContent value="{role>/summary/totalUsers}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiAssignments}"  frameType="OneByOne"><TileContent><NumericContent value="{role>/summary/totalAssignments}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiRcs}"          frameType="OneByOne"><TileContent><NumericContent value="{role>/summary/totalRoleCollections}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiCrossTier}"    frameType="OneByOne"><TileContent><NumericContent value="{role>/summary/crossTierUsers}" valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiFindings}"     frameType="OneByOne"><TileContent><NumericContent value="{role>/summary/toxicFindings}" valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiCritical}"     frameType="OneByOne"><TileContent><NumericContent value="{role>/summary/criticalFindings}" valueColor="Error" /></TileContent></GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <SearchField placeholder="{i18n>searchPlaceholder}" value="{role>/search}" liveChange="onSearch" width="40%" />
+      <ToolbarSpacer />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <IconTabBar id="tabs" expandable="false" stretchContentHeight="true">
+      <items>
+        <IconTabFilter text="{i18n>tabFindings}" key="findings" count="{role>/summary/toxicFindings}">
+          <Table id="findingsTable" items="{path: 'role>/findings', filters: []}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colSeverity}" /></Column>
+              <Column><Text text="{i18n>colPolicy}" /></Column>
+              <Column><Text text="{i18n>colUser}" /></Column>
+              <Column><Text text="{i18n>colSummary}" /></Column>
+              <Column><Text text="{i18n>colIgnored}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <ObjectStatus text="{role>severity}"
+                                state="{= ${role>severity} === 'error' ? 'Error' : ${role>severity} === 'warn' ? 'Warning' : 'Information' }" />
+                  <Text text="{role>policyId}" />
+                  <ObjectIdentifier title="{role>displayName}" text="{role>email}" />
+                  <Text text="{role>summary}" />
+                  <CheckBox selected="{role>ignored}" enabled="false" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabUsers}" key="users" count="{role>/summary/totalUsers}">
+          <Table id="usersTable" items="{path: 'role>/users', filters: []}" mode="MultiSelect" growing="true" growingThreshold="50">
+            <columns>
+              <Column><Text text="{i18n>colUser}" /></Column>
+              <Column><Text text="{i18n>colOrigin}" /></Column>
+              <Column><Text text="{i18n>colSubaccounts}" /></Column>
+              <Column><Text text="{i18n>colAssignments}" /></Column>
+              <Column><Text text="{i18n>colTiers}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem type="Navigation" press="onUserPress">
+                <cells>
+                  <ObjectIdentifier title="{role>displayName}" text="{role>email}" />
+                  <Text text="{role>origin}" />
+                  <ObjectNumber number="{role>subaccountCount}" />
+                  <ObjectNumber number="{role>assignmentCount}" />
+                  <Text text="{= ${role>assignments}.map(function(a){ return a.tier; }).filter(function(t,i,arr){ return arr.indexOf(t) === i; }).join(', ') }" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabRcs}" key="rcs">
+          <Table id="rcsTable" items="{path: 'role>/rcs', filters: []}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colSubaccount}" /></Column>
+              <Column><Text text="{i18n>colTier}" /></Column>
+              <Column><Text text="{i18n>colRc}" /></Column>
+              <Column><Text text="{i18n>colDescription}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{role>subaccountName}" />
+                  <Text text="{role>tier}" />
+                  <ObjectIdentifier title="{role>rcName}" />
+                  <Text text="{role>rcDescription}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+      </items>
+    </IconTabBar>
+  </Page>
+</mvc:View>

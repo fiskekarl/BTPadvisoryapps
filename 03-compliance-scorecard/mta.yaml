@@ -1,0 +1,108 @@
+_schema-version: '3.1'
+ID: btp-compliance-scorecard
+version: 1.0.0
+description: SAP BTP Architecture Compliance Scorecard — advisory app
+
+parameters:
+  enable-parallel-deployments: true
+  deploy_mode: html5-repo
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production
+        - echo "omit=dev" > gen/srv/.npmrc
+        - npm ci --prefix app/scorecard-dashboard
+
+modules:
+
+  - name: score-ui
+    type: html5
+    path: app/scorecard-dashboard
+    build-parameters:
+      builder: custom
+      commands: [npm run build]
+      supported-platforms: []
+
+  - name: score-ui-deployer
+    type: com.sap.application.content
+    path: .
+    requires:
+      - name: score-html5-repo-host
+        parameters: { content-target: true }
+    build-parameters:
+      build-result: resources/
+      requires:
+        - name: score-ui
+          artifacts: [scorecard-dashboard.zip]
+          target-path: resources/
+
+  - name: score-srv
+    type: nodejs
+    path: gen/srv
+    parameters: { memory: 512M, disk-quota: 1024M, instances: 1 }
+    requires:
+      - name: score-xsuaa
+      - name: score-cis
+    provides:
+      - name: score-srv-api
+        public: true
+        properties: { srv-url: ${default-url} }
+
+  - name: score-destination-content
+    type: com.sap.application.content
+    requires:
+      - name: score-destination-service
+        parameters: { content-target: true }
+      - name: score-xsuaa
+        parameters: { service-key: { name: score-xsuaa-key } }
+      - name: score-html5-repo-host
+        parameters: { service-key: { name: score-html5-repo-host-key } }
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Authentication: OAuth2UserTokenExchange
+              Name: score-srv-destination
+              HTML5.ForwardAuthToken: true
+              TokenServiceInstanceName: score-xsuaa
+              TokenServiceKeyName: score-xsuaa-key
+              URL: ~{score-srv-api/srv-url}
+              sap.cloud.service: com.btpconsulting.compliancescorecard
+          existing_destinations_policy: update
+    build-parameters: { no-source: true }
+
+resources:
+
+  - name: score-xsuaa
+    type: com.sap.xs.uaa
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: btp-compliance-scorecard-${org}-${space}
+        tenant-mode: dedicated
+
+  - name: score-cis
+    type: org.cloudfoundry.managed-service
+    parameters: { service: cis, service-plan: central }
+
+  - name: score-html5-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters: { service: html5-apps-repo, service-plan: app-host }
+
+  - name: score-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            existing_destinations_policy: update
+            destinations:
+              - { Name: ui5, Description: SAP UI5 CDN, URL: https://ui5.sap.com, Type: HTTP, ProxyType: Internet, Authentication: NoAuthentication }

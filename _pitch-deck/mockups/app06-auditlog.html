@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Audit-Log &amp; Change Inventory Console</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>.tiles-row { grid-template-columns: repeat(6, 1fr); }</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Audit-Log &amp; Change Inventory Console</div>
+    <div class="right"><span>acme global account</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Audit Log &amp; Change Inventory</h1>
+    <div class="sub">Unified change timeline across subaccounts for SOX/ISO walkthroughs</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Events (30d)</div><div class="value">487</div></div>
+    <div class="tile crit"><div class="label">Critical Anomalies</div><div class="value">4</div></div>
+    <div class="tile crit"><div class="label">After-Hours Actions</div><div class="value">8</div></div>
+    <div class="tile warn"><div class="label">Failed Actions</div><div class="value">12</div></div>
+    <div class="tile"><div class="label">Active Subaccounts</div><div class="value" style="color:#1D2D3E">7</div></div>
+    <div class="tile"><div class="label">Unique Actors</div><div class="value" style="color:#1D2D3E">23</div></div>
+  </div>
+
+  <div class="toolbar">
+    <span style="font-size:12px;color:#556B82">Window</span>
+    <select style="padding:6px 10px;border:1px solid #BCC4CB;border-radius:6px;font-size:12px;background:white"><option>Last 30 days</option></select>
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Anomalies <span class="badge">4</span></div>
+    <div class="tab">Events <span class="badge">487</span></div>
+    <div class="tab">Change Timeline</div>
+    <div class="tab">Anomaly Rules</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Severity</th><th>Time</th><th>Subaccount</th><th>Actor</th>
+          <th>Action</th><th>Resource</th><th>Anomaly Rule</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td>Sun, May 03  02:14 UTC</td>
+          <td>Production</td><td>bob@acme.com</td>
+          <td><code style="font-size:11px;background:#F5F6F7;padding:1px 6px;border-radius:3px">role-collection.assign</code></td>
+          <td>Subaccount Administrator</td>
+          <td>ADMIN_GRANT_OFF_HOURS</td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td>Fri, May 01  18:42 UTC</td>
+          <td>Production</td><td>alice@acme.com</td>
+          <td><code style="font-size:11px;background:#F5F6F7;padding:1px 6px;border-radius:3px">trust.update</code></td>
+          <td>IAS-Trust</td>
+          <td>ADMIN_GRANT_OFF_HOURS</td>
+        </tr>
+        <tr>
+          <td><span class="status warn">warn</span></td>
+          <td>Sat, May 02  10:22 UTC</td>
+          <td>QA</td><td>svc-deploy-bot</td>
+          <td><code style="font-size:11px;background:#F5F6F7;padding:1px 6px;border-radius:3px">mta.deploy</code></td>
+          <td>crm-srv</td>
+          <td>MTA_DEPLOY_WEEKEND</td>
+        </tr>
+        <tr>
+          <td><span class="status warn">warn</span></td>
+          <td>Wed, Apr 30  09:01 UTC</td>
+          <td>Dev</td><td>carol@acme.com</td>
+          <td><code style="font-size:11px;background:#F5F6F7;padding:1px 6px;border-radius:3px">destination.update</code></td>
+          <td>s4-prod (outcome: failure)</td>
+          <td>FAILED_LOGIN_BURST</td>
+        </tr>
+        <tr>
+          <td><span class="status info">info</span></td>
+          <td>Wed, Apr 30  14:18 UTC</td>
+          <td>Production</td><td>erin@acme.com</td>
+          <td><code style="font-size:11px;background:#F5F6F7;padding:1px 6px;border-radius:3px">destination.update</code></td>
+          <td>s4-prod</td>
+          <td>DESTINATION_CHANGE</td>
+        </tr>
+        <tr>
+          <td><span class="status info">info</span></td>
+          <td>Mon, Apr 28  11:00 UTC</td>
+          <td>Production</td><td>trust-admin</td>
+          <td><code style="font-size:11px;background:#F5F6F7;padding:1px 6px;border-radius:3px">trust.update</code></td>
+          <td>azure-ad-prod</td>
+          <td>DESTINATION_CHANGE</td>
+        </tr>
+        <tr>
+          <td><span class="status info">info</span></td>
+          <td>Mon, Apr 28  09:14 UTC</td>
+          <td>Integration</td><td>alice@acme.com</td>
+          <td><code style="font-size:11px;background:#F5F6F7;padding:1px 6px;border-radius:3px">destination.create</code></td>
+          <td>event-mesh-prod</td>
+          <td>DESTINATION_CHANGE</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

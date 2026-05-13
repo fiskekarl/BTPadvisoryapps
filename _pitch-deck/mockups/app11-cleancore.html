@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Clean Core Compliance</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>.tiles-row { grid-template-columns: repeat(6, 1fr); }</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Clean Core Compliance Dashboard</div>
+    <div class="right"><span>S4P · Production · scanned 2026-05-08</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Clean Core Compliance</h1>
+    <div class="sub">Audit of S/4HANA extensions against clean-core principles — released APIs only, no in-stack mods</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Total Extensions</div><div class="value">312</div></div>
+    <div class="tile ok"><div class="label">Clean</div><div class="value">217</div></div>
+    <div class="tile warn"><div class="label">Key-User Ext</div><div class="value">28</div></div>
+    <div class="tile"><div class="label">Side-by-Side</div><div class="value" style="color:#1D2D3E">52</div></div>
+    <div class="tile crit"><div class="label">In-Stack Mods</div><div class="value">15</div></div>
+    <div class="tile ok"><div class="label">Compliance %</div><div class="value">69.5</div></div>
+  </div>
+
+  <div class="toolbar">
+    <span style="font-size:12px;color:#556B82">S/4 System</span>
+    <select style="padding:6px 10px;border:1px solid #BCC4CB;border-radius:6px;font-size:12px;background:white"><option>S4P (Production)</option></select>
+    <div class="spacer"></div>
+    <button class="btn" style="background:#0070F2;color:white;border-color:#0070F2">⚙ Run scan</button>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="table-wrap" style="border-top: 1px solid #D5DADD; margin-top: 0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Severity</th><th>Classification</th><th>Type</th><th>Object</th>
+          <th>Package</th><th>Released API</th><th>Violations</th>
+          <th>Modified By</th><th>Modified</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td><span class="status crit">IN_STACK_MOD</span></td>
+          <td>CLAS</td>
+          <td><div class="id">ZCL_CUSTOMER_HELPER</div></td>
+          <td>ZACME_CRM</td><td>—</td>
+          <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">CL_BUPA_CONTROL_BAS used directly · INSERT INTO KNA1 (forbidden DDIC write)</td>
+          <td>bob</td><td>2025-11-08</td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td><span class="status crit">IN_STACK_MOD</span></td>
+          <td>PROG</td>
+          <td><div class="id">ZREP_NIGHTLY_RECONCILE</div></td>
+          <td>ZACME_BATCH</td><td>—</td>
+          <td style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Direct DB INSERT on VBAK · Calls non-released FM</td>
+          <td>dave</td><td>2024-08-20</td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td><span class="status crit">IN_STACK_MOD</span></td>
+          <td>CLAS</td>
+          <td><div class="id">CL_INVOICE_DETERMINATION</div></td>
+          <td>V</td><td>—</td>
+          <td>Modified standard SAP class (in-stack mod)</td>
+          <td>bob</td><td>2024-05-10</td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><span class="status crit">error</span></td>
+          <td><span class="status crit">IN_STACK_MOD</span></td>
+          <td>CDS</td>
+          <td><div class="id">ZC_CUSTOMER_360</div></td>
+          <td>ZACME_VDM</td><td>—</td>
+          <td>Joins standard CDS view I_Customer without released annotation</td>
+          <td>dave</td><td>2026-02-18</td>
+        </tr>
+        <tr>
+          <td><span class="status warn">warn</span></td>
+          <td><span class="status warn">KEY_USER_EXT</span></td>
+          <td>BADI</td>
+          <td><div class="id">BADI_SD_SALES_ITEM_DETERMINE</div></td>
+          <td>ZACME_BADI</td><td>✓</td>
+          <td>Uses deprecated BAdI filter — migrate to BTP-side event</td>
+          <td>erin</td><td>2026-01-14</td>
+        </tr>
+        <tr>
+          <td><span class="status info">info</span></td>
+          <td><span class="status info">SIDE_BY_SIDE</span></td>
+          <td>CLAS</td>
+          <td><div class="id">ZCL_ORDER_ENRICHER</div></td>
+          <td>ZACME_ORDERS</td><td>✓</td>
+          <td class="muted">—</td>
+          <td>alice</td><td>2026-03-14</td>
+        </tr>
+        <tr>
+          <td><span class="status info">info</span></td>
+          <td><span class="status info">SIDE_BY_SIDE</span></td>
+          <td>CDS</td>
+          <td><div class="id">ZI_SALES_ORDER</div></td>
+          <td>ZACME_VDM</td><td>✓</td>
+          <td class="muted">—</td>
+          <td>carol</td><td>2026-04-02</td>
+        </tr>
+        <tr>
+          <td><span class="status ok">info</span></td>
+          <td><span class="status ok">CLEAN</span></td>
+          <td>CLAS</td>
+          <td><div class="id">ZCL_ARIBA_PROXY</div></td>
+          <td>ZACME_INTEG</td><td>✓</td>
+          <td class="muted">—</td>
+          <td>erin</td><td>2026-05-01</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

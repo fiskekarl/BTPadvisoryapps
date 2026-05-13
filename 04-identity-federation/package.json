@@ -1,0 +1,33 @@
+{
+  "name": "btp-identity-federation",
+  "version": "1.0.0",
+  "description": "SAP BTP CIS/IAS Identity Federation Health Check — Fiori app on CAP Node.js",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@sap/cds": "^9",
+    "@sap/xssec": "^4",
+    "@cap-js/sqlite": "^2",
+    "axios": "^1",
+    "express": "^4",
+    "passport": "^0"
+  },
+  "devDependencies": {
+    "@sap/cds-dk": "^9",
+    "@sap/eslint-plugin-cds": "^3"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "watch": "cds watch",
+    "build": "cds build --production"
+  },
+  "cds": {
+    "requires": {
+      "auth": { "kind": "xsuaa" },
+      "db": { "kind": "sqlite", "credentials": { "url": "ident.db" } },
+      "[development]": {
+        "auth": "dummy",
+        "db": { "kind": "sqlite", "credentials": { "url": ":memory:" } }
+      }
+    }
+  }
+}

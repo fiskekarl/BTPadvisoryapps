@@ -1,0 +1,41 @@
+# Node
+node_modules/
+npm-debug.log
+package-lock.json
+
+# CAP build output
+gen/
+.cdsrc-private.json
+
+# Local databases (per-app sqlite files)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Logs
+*.log
+cds-server.log
+
+# MTA build artefacts
+mta_archives/
+resources/
+*.mtar
+*.zip
+.mtaignore.local
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Pitch deck build output (keep mockups + screenshots + build-deck.js sources)
+_pitch-deck/.playwright-mcp/
+_pitch-deck/console-*.log
+
+# Playwright MCP working files (anywhere)
+.playwright-mcp/
+console-*.log

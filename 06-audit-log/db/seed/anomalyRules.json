@@ -1,0 +1,46 @@
+[
+  {
+    "id": "ADMIN_GRANT_OFF_HOURS",
+    "title": "Admin role granted outside change window",
+    "description": "A role-collection.assign event for an admin RC happened outside 09:00–17:00 weekday hours.",
+    "actionPattern": "role-collection.assign|user.role-collection.add",
+    "changeWindowStart": "09:00",
+    "changeWindowEnd": "17:00",
+    "onWeekend": true,
+    "severity": "error",
+    "enabled": true
+  },
+  {
+    "id": "MTA_DEPLOY_WEEKEND",
+    "title": "MTA deploy on weekend",
+    "description": "A production MTA deploy happened on Saturday or Sunday.",
+    "actionPattern": "mta.deploy",
+    "changeWindowStart": "",
+    "changeWindowEnd": "",
+    "onWeekend": true,
+    "severity": "warn",
+    "enabled": true
+  },
+  {
+    "id": "DESTINATION_CHANGE",
+    "title": "Destination configuration changed",
+    "description": "Destination create/update/delete events warrant review.",
+    "actionPattern": "destination\\.(create|update|delete)",
+    "changeWindowStart": "",
+    "changeWindowEnd": "",
+    "onWeekend": false,
+    "severity": "info",
+    "enabled": true
+  },
+  {
+    "id": "FAILED_LOGIN_BURST",
+    "title": "Failed admin action",
+    "description": "Audit event with outcome=failure on a security-sensitive action.",
+    "actionPattern": "(role-collection|user|trust|destination)\\..*",
+    "changeWindowStart": "",
+    "changeWindowEnd": "",
+    "onWeekend": false,
+    "severity": "warn",
+    "enabled": true
+  }
+]

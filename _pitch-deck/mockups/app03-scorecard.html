@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Architecture Compliance Scorecard</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>
+  .tiles-row { grid-template-columns: repeat(4, 1fr); }
+  .grade-tile .value { display: flex; align-items: center; gap: 12px; font-size: 22px; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Architecture Compliance Scorecard</div>
+    <div class="right"><span>acme global account</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Compliance Scorecard</h1>
+    <div class="sub">Score the BTP landscape against opinionated governance rules — IP centerpiece</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile grade-tile">
+      <div class="label">Overall Grade</div>
+      <div class="value"><span class="grade B">B</span><span style="color:#256F3A;font-size:32px;font-weight:600;">87.5</span><span style="color:#8396A8;font-size:14px;">/ 100</span></div>
+    </div>
+    <div class="tile info"><div class="label">Subaccounts Evaluated</div><div class="value">12</div></div>
+    <div class="tile"><div class="label">Rules Active</div><div class="value" style="color:#1D2D3E">6</div><div class="sub">Edited 2 days ago</div></div>
+    <div class="tile crit"><div class="label">Critical Findings</div><div class="value">4</div><div class="sub">Across 3 subaccounts</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn btn-primary">📷 Run Scan &amp; Save Snapshot</button>
+    <button class="btn">⬇ Export Findings</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">By Subaccount</div>
+    <div class="tab">Findings <span class="badge">28</span></div>
+    <div class="tab">Rules</div>
+    <div class="tab">Snapshots</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Subaccount</th><th>Grade</th><th class="num">Score</th>
+          <th class="num">Passed</th><th class="num">Failed</th><th class="num">Errors</th><th class="num">Warnings</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="id">Production</div></td>
+          <td><span class="grade A">A</span></td>
+          <td class="num" style="font-weight:600;color:#1F5829">95.5</td>
+          <td class="num">21</td><td class="num">1</td><td class="num"><span class="num-state ok">0</span></td><td class="num"><span class="num-state warn">1</span></td>
+        </tr>
+        <tr>
+          <td><div class="id">Analytics</div></td>
+          <td><span class="grade A">A</span></td>
+          <td class="num" style="font-weight:600;color:#1F5829">94.0</td>
+          <td class="num">19</td><td class="num">1</td><td class="num"><span class="num-state ok">0</span></td><td class="num"><span class="num-state warn">1</span></td>
+        </tr>
+        <tr>
+          <td><div class="id">Portal</div></td>
+          <td><span class="grade B">B</span></td>
+          <td class="num" style="font-weight:600;color:#256F3A">88.5</td>
+          <td class="num">18</td><td class="num">2</td><td class="num"><span class="num-state ok">0</span></td><td class="num"><span class="num-state warn">2</span></td>
+        </tr>
+        <tr>
+          <td><div class="id">QA</div></td>
+          <td><span class="grade B">B</span></td>
+          <td class="num" style="font-weight:600;color:#256F3A">85.7</td>
+          <td class="num">17</td><td class="num">3</td><td class="num"><span class="num-state ok">0</span></td><td class="num"><span class="num-state warn">3</span></td>
+        </tr>
+        <tr>
+          <td><div class="id">Integration</div></td>
+          <td><span class="grade C">C</span></td>
+          <td class="num" style="font-weight:600;color:#DF6E0C">76.2</td>
+          <td class="num">14</td><td class="num">5</td><td class="num"><span class="num-state crit">1</span></td><td class="num"><span class="num-state warn">4</span></td>
+        </tr>
+        <tr>
+          <td><div class="id">Dev</div></td>
+          <td><span class="grade C">C</span></td>
+          <td class="num" style="font-weight:600;color:#DF6E0C">72.0</td>
+          <td class="num">13</td><td class="num">5</td><td class="num"><span class="num-state crit">1</span></td><td class="num"><span class="num-state warn">4</span></td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><div class="id">Sandbox</div></td>
+          <td><span class="grade D">D</span></td>
+          <td class="num" style="font-weight:600;color:#BB0000">52.3</td>
+          <td class="num">11</td><td class="num">10</td><td class="num"><span class="num-state crit">2</span></td><td class="num"><span class="num-state warn">8</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

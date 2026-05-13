@@ -1,0 +1,108 @@
+_schema-version: '3.1'
+ID: btp-cert-expiry
+version: 1.0.0
+description: SAP BTP Trust Config & Cert Expiry Console — advisory app
+
+parameters:
+  enable-parallel-deployments: true
+  deploy_mode: html5-repo
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production
+        - echo "omit=dev" > gen/srv/.npmrc
+        - npm ci --prefix app/cert-dashboard
+
+modules:
+
+  - name: cert-ui
+    type: html5
+    path: app/cert-dashboard
+    build-parameters: { builder: custom, commands: [npm run build], supported-platforms: [] }
+
+  - name: cert-ui-deployer
+    type: com.sap.application.content
+    path: .
+    requires:
+      - { name: cert-html5-repo-host, parameters: { content-target: true } }
+    build-parameters:
+      build-result: resources/
+      requires:
+        - name: cert-ui
+          artifacts: [cert-dashboard.zip]
+          target-path: resources/
+
+  - name: cert-srv
+    type: nodejs
+    path: gen/srv
+    parameters: { memory: 512M, disk-quota: 1024M, instances: 1 }
+    requires:
+      - name: cert-xsuaa
+      - name: cert-cis
+      - name: cert-destination
+    provides:
+      - name: cert-srv-api
+        public: true
+        properties: { srv-url: ${default-url} }
+
+  - name: cert-destination-content
+    type: com.sap.application.content
+    requires:
+      - { name: cert-destination-service, parameters: { content-target: true } }
+      - { name: cert-xsuaa, parameters: { service-key: { name: cert-xsuaa-key } } }
+      - { name: cert-html5-repo-host, parameters: { service-key: { name: cert-html5-repo-host-key } } }
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Authentication: OAuth2UserTokenExchange
+              Name: cert-srv-destination
+              HTML5.ForwardAuthToken: true
+              TokenServiceInstanceName: cert-xsuaa
+              TokenServiceKeyName: cert-xsuaa-key
+              URL: ~{cert-srv-api/srv-url}
+              sap.cloud.service: com.btpconsulting.certexpiry
+          existing_destinations_policy: update
+    build-parameters: { no-source: true }
+
+resources:
+
+  - name: cert-xsuaa
+    type: com.sap.xs.uaa
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: btp-cert-expiry-${org}-${space}
+        tenant-mode: dedicated
+
+  - name: cert-cis
+    type: org.cloudfoundry.managed-service
+    parameters: { service: cis, service-plan: central }
+
+  # The cert console reads destination-bound certs from each subaccount's
+  # destination service. Same DESTINATION_KEYS pattern as app #2.
+  - name: cert-destination
+    type: org.cloudfoundry.managed-service
+    parameters: { service: destination, service-plan: lite }
+
+  - name: cert-html5-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters: { service: html5-apps-repo, service-plan: app-host }
+
+  - name: cert-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            existing_destinations_policy: update
+            destinations:
+              - { Name: ui5, Description: SAP UI5 CDN, URL: https://ui5.sap.com, Type: HTTP, ProxyType: Internet, Authentication: NoAuthentication }

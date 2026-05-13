@@ -1,0 +1,65 @@
+{
+  "xsappname": "btp-subaccount-lifecycle",
+  "tenant-mode": "dedicated",
+  "description": "BTP Subaccount Lifecycle & Drift Tracker — XSUAA security descriptor",
+
+  "oauth2-configuration": {
+    "redirect-uris": [
+      "https://*.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.eu10.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.eu20.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.us10.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.us20.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.ap10.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.ap20.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.jp10.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.br10.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.ca10.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.ch20.hana.ondemand.com/**",
+      "https://*.launchpad.cfapps.in30.hana.ondemand.com/**"
+    ],
+    "credential-types": ["binding-secret", "x509"]
+  },
+
+  "scopes": [
+    {
+      "name": "$XSAPPNAME.LifecycleViewer",
+      "description": "Read access to subaccount inventory, drift reports, and audit trail"
+    },
+    {
+      "name": "$XSAPPNAME.LifecycleAdmin",
+      "description": "Write access: configure drift baselines and ignore-rules per landscape tier"
+    }
+  ],
+
+  "attributes": [],
+
+  "role-templates": [
+    {
+      "name": "LifecycleViewer",
+      "description": "View subaccount inventory, drift findings, and audit-log activity timelines",
+      "scope-references": ["$XSAPPNAME.LifecycleViewer"]
+    },
+    {
+      "name": "LifecycleAdmin",
+      "description": "All viewer rights plus the ability to manage drift baselines and ignore-rules",
+      "scope-references": [
+        "$XSAPPNAME.LifecycleViewer",
+        "$XSAPPNAME.LifecycleAdmin"
+      ]
+    }
+  ],
+
+  "role-collections": [
+    {
+      "name": "BTP Subaccount Lifecycle Viewer",
+      "description": "Read-only access to the Subaccount Lifecycle & Drift Tracker",
+      "role-template-references": ["$XSAPPNAME.LifecycleViewer"]
+    },
+    {
+      "name": "BTP Subaccount Lifecycle Administrator",
+      "description": "Full access including baseline and ignore-rule configuration",
+      "role-template-references": ["$XSAPPNAME.LifecycleAdmin"]
+    }
+  ]
+}

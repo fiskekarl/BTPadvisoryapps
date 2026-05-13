@@ -1,0 +1,115 @@
+<mvc:View
+  controllerName="com.btpconsulting.destinationinventory.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiTotal}"        frameType="OneByOne"><TileContent><NumericContent value="{destinv>/summary/totalDestinations}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiBasicAuth}"    frameType="OneByOne"><TileContent><NumericContent value="{destinv>/summary/basicAuthCount}"    valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiOnPrem}"       frameType="OneByOne"><TileContent><NumericContent value="{destinv>/summary/onPremiseCount}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiCertsSoon}"    frameType="OneByOne"><TileContent><NumericContent value="{destinv>/summary/certsExpiring60d}" valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiCertsCritical}" frameType="OneByOne"><TileContent><NumericContent value="{destinv>/summary/certsExpiring14d}" valueColor="Error" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiFindings}"     frameType="OneByOne"><TileContent><NumericContent value="{destinv>/summary/findings}"          valueColor="Critical" /></TileContent></GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <ToolbarSpacer />
+      <Button text="{i18n>btnPolicy}"  icon="sap-icon://settings"         press="onEditPolicy" />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport"  />
+    </Toolbar>
+
+    <IconTabBar id="tabs" expandable="false" stretchContentHeight="true">
+      <items>
+        <IconTabFilter text="{i18n>tabDestinations}" key="destinations">
+          <Table items="{destinv>/destinations}" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colSubaccount}"   /></Column>
+              <Column><Text text="{i18n>colName}"         /></Column>
+              <Column><Text text="{i18n>colType}"         /></Column>
+              <Column><Text text="{i18n>colProxy}"        /></Column>
+              <Column><Text text="{i18n>colAuth}"         /></Column>
+              <Column><Text text="{i18n>colUrl}"          /></Column>
+              <Column><Text text="{i18n>colCertExpiry}"   /></Column>
+              <Column><Text text="{i18n>colDaysToExpiry}" /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{destinv>subaccountName}" />
+                  <ObjectIdentifier title="{destinv>name}" />
+                  <Text text="{destinv>type}" />
+                  <Text text="{destinv>proxyType}" />
+                  <ObjectStatus text="{destinv>authentication}"
+                                state="{= ${destinv>authentication} === 'BasicAuthentication' ? 'Error' : 'Success' }" />
+                  <Link text="{destinv>url}" target="_blank" href="{destinv>url}" />
+                  <Text text="{destinv>certNotAfter}" />
+                  <ObjectNumber number="{destinv>daysToExpiry}"
+                                state="{= ${destinv>daysToExpiry} == null ? 'None' : ${destinv>daysToExpiry} &lt;= 14 ? 'Error' : ${destinv>daysToExpiry} &lt;= 60 ? 'Warning' : 'Success' }" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabFindings}" key="findings" count="{destinv>/summary/findings}">
+          <Table items="{destinv>/findings}" growing="true" growingThreshold="100" mode="SingleSelectMaster" itemPress="onFindingPress">
+            <columns>
+              <Column><Text text="{i18n>colSeverity}"   /></Column>
+              <Column><Text text="{i18n>colSubaccount}" /></Column>
+              <Column><Text text="{i18n>colName}"       /></Column>
+              <Column><Text text="{i18n>colCode}"       /></Column>
+              <Column><Text text="{i18n>colSummary}"    /></Column>
+              <Column><Text text="{i18n>colIgnored}"    /></Column>
+            </columns>
+            <items>
+              <ColumnListItem type="Active" press="onFindingPress">
+                <cells>
+                  <ObjectStatus text="{destinv>severity}"
+                                state="{= ${destinv>severity} === 'error' ? 'Error' : ${destinv>severity} === 'warn' ? 'Warning' : 'Information' }" />
+                  <Text text="{destinv>subaccountId}" />
+                  <Text text="{destinv>destinationName}" />
+                  <Text text="{destinv>code}" />
+                  <Text text="{destinv>summary}" />
+                  <CheckBox selected="{destinv>ignored}" enabled="false" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+
+        <IconTabFilter text="{i18n>tabIgnoreRules}" key="ignoreRules">
+          <Toolbar>
+            <ToolbarSpacer />
+            <Button text="{i18n>btnDelete}" icon="sap-icon://delete" press="onDeleteIgnore" />
+          </Toolbar>
+          <Table items="{destinv>/ignoreRules}" mode="SingleSelectMaster" growing="true" growingThreshold="100">
+            <columns>
+              <Column><Text text="{i18n>colSubaccount}"   /></Column>
+              <Column><Text text="{i18n>colName}"         /></Column>
+              <Column><Text text="{i18n>colCode}"         /></Column>
+              <Column><Text text="{i18n>colReason}"       /></Column>
+              <Column><Text text="{i18n>colExpires}"      /></Column>
+              <Column><Text text="{i18n>colCreatedBy}"    /></Column>
+            </columns>
+            <items>
+              <ColumnListItem>
+                <cells>
+                  <Text text="{destinv>subaccountId}" />
+                  <Text text="{destinv>destinationName}" />
+                  <Text text="{destinv>findingCode}" />
+                  <Text text="{destinv>reason}" />
+                  <Text text="{destinv>expiresAt}" />
+                  <Text text="{destinv>createdBy}" />
+                </cells>
+              </ColumnListItem>
+            </items>
+          </Table>
+        </IconTabFilter>
+      </items>
+    </IconTabBar>
+  </Page>
+</mvc:View>

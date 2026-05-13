@@ -1,0 +1,69 @@
+<mvc:View
+  controllerName="com.btpconsulting.certexpiry.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout"
+  xmlns:core="sap.ui.core">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiTotal}"    frameType="OneByOne"><TileContent><NumericContent value="{cert>/summary/totalCerts}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiExpired}"  frameType="OneByOne"><TileContent><NumericContent value="{cert>/summary/expiredCount}"   valueColor="Error" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiCritical}" frameType="OneByOne"><TileContent><NumericContent value="{cert>/summary/critical14d}"    valueColor="Error" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiWarn}"     frameType="OneByOne"><TileContent><NumericContent value="{cert>/summary/warn30d}"        valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiNotice}"   frameType="OneByOne"><TileContent><NumericContent value="{cert>/summary/notice90d}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiUnack}"    frameType="OneByOne"><TileContent><NumericContent value="{cert>/summary/unacknowledged}" valueColor="Critical" /></TileContent></GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <Label text="{i18n>labelKind}" />
+      <Select selectedKey="{cert>/kindFilter}" change="onFilterChange">
+        <items>
+          <core:Item key=""              text="{i18n>kindAll}"     />
+          <core:Item key="XSUAA_TRUST"   text="{i18n>kindXsuaa}"   />
+          <core:Item key="IAS_SAML"      text="{i18n>kindIas}"     />
+          <core:Item key="DESTINATION"   text="{i18n>kindDest}"    />
+          <core:Item key="CTMS"          text="{i18n>kindCtms}"    />
+          <core:Item key="SERVICE_BINDING" text="{i18n>kindBinding}" />
+        </items>
+      </Select>
+      <ToolbarSpacer />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <Table id="certTable" items="{cert>/certs}" growing="true" growingThreshold="100">
+      <columns>
+        <Column><Text text="{i18n>colSeverity}" /></Column>
+        <Column><Text text="{i18n>colKind}" /></Column>
+        <Column><Text text="{i18n>colSubaccount}" /></Column>
+        <Column><Text text="{i18n>colName}" /></Column>
+        <Column><Text text="{i18n>colSubject}" /></Column>
+        <Column><Text text="{i18n>colNotAfter}" /></Column>
+        <Column><Text text="{i18n>colDays}" /></Column>
+        <Column><Text text="{i18n>colBlastRadius}" /></Column>
+        <Column><Text text="{i18n>colOwner}" /></Column>
+        <Column><Text text="{i18n>colAck}" /></Column>
+      </columns>
+      <items>
+        <ColumnListItem>
+          <cells>
+            <ObjectStatus text="{cert>severity}"
+                          state="{= ${cert>severity} === 'expired' || ${cert>severity} === 'error' ? 'Error' : ${cert>severity} === 'warn' ? 'Warning' : ${cert>severity} === 'notice' ? 'Information' : 'Success' }" />
+            <Text text="{cert>kind}" />
+            <Text text="{cert>subaccountName}" />
+            <ObjectIdentifier title="{cert>name}" />
+            <Text text="{cert>subject}" />
+            <Text text="{cert>notAfter}" />
+            <ObjectNumber number="{cert>daysToExpiry}"
+                          state="{= ${cert>daysToExpiry} == null ? 'None' : ${cert>daysToExpiry} &lt; 0 ? 'Error' : ${cert>daysToExpiry} &lt;= 14 ? 'Error' : ${cert>daysToExpiry} &lt;= 30 ? 'Warning' : 'Success' }" />
+            <Text text="{cert>blastRadius}" />
+            <Text text="{cert>rotationOwner}" />
+            <CheckBox selected="{cert>acknowledged}" enabled="false" />
+          </cells>
+        </ColumnListItem>
+      </items>
+    </Table>
+  </Page>
+</mvc:View>

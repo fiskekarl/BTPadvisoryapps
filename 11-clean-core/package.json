@@ -1,0 +1,25 @@
+{
+  "name": "btp-clean-core",
+  "version": "1.0.0",
+  "description": "SAP BTP Clean Core Compliance Dashboard — Fiori app on CAP Node.js with S/4 scanner",
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@sap/cds": "^9",
+    "@sap/xssec": "^4",
+    "@cap-js/sqlite": "^2",
+    "@sap-cloud-sdk/connectivity": "^3",
+    "@sap-cloud-sdk/http-client": "^3",
+    "axios": "^1",
+    "express": "^4",
+    "passport": "^0"
+  },
+  "devDependencies": { "@sap/cds-dk": "^9", "@sap/eslint-plugin-cds": "^3" },
+  "scripts": { "start": "cds-serve", "watch": "cds watch", "build": "cds build --production" },
+  "cds": {
+    "requires": {
+      "auth": { "kind": "xsuaa" },
+      "db": { "kind": "sqlite", "credentials": { "url": "cleancore.db" } },
+      "[development]": { "auth": "dummy", "db": { "kind": "sqlite", "credentials": { "url": ":memory:" } } }
+    }
+  }
+}

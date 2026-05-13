@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Cost Allocation &amp; Showback</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>.tiles-row { grid-template-columns: repeat(6, 1fr); }</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Cost Allocation &amp; Showback Engine</div>
+    <div class="right"><span>acme global account · 2026-05</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Cost Allocation &amp; Showback</h1>
+    <div class="sub">Hierarchical chargeback — BU → Product → Cost Center → Subaccount</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Total Cost</div><div class="value" style="font-size:24px;line-height:1.2">€ 24,830</div></div>
+    <div class="tile ok"><div class="label">Allocated %</div><div class="value">93.4</div></div>
+    <div class="tile"><div class="label">Business Units</div><div class="value" style="color:#1D2D3E">3</div></div>
+    <div class="tile"><div class="label">Cost Centers</div><div class="value" style="color:#1D2D3E">5</div></div>
+    <div class="tile"><div class="label">Departments</div><div class="value" style="color:#1D2D3E">5</div></div>
+    <div class="tile crit"><div class="label">Unallocated</div><div class="value" style="font-size:22px;line-height:1.2">€ 1,635</div></div>
+  </div>
+
+  <div class="toolbar">
+    <span style="font-size:12px;color:#556B82">Month</span>
+    <input style="padding:6px 10px;border:1px solid #BCC4CB;border-radius:6px;font-size:12px;width:110px" value="2026-05" />
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Invoices (Showback)</div>
+    <div class="tab">Cost Tree</div>
+    <div class="tab">Chargeback Policies</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Cost Center</th><th>Business Unit</th><th>Department</th>
+          <th class="num">Direct Cost</th><th class="num">Shared Cost</th><th class="num">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="id">CC-1001</div></td>
+          <td>Enterprise IT</td><td>IT Operations &amp; Infrastructure</td>
+          <td class="num">€ 5,200.00</td><td class="num">€ 198.00</td>
+          <td class="num" style="font-weight:600">€ 5,398.00</td>
+        </tr>
+        <tr>
+          <td><div class="id">CC-1002</div></td>
+          <td>Engineering</td><td>Software Engineering</td>
+          <td class="num">€ 4,140.00</td><td class="num">€ 198.00</td>
+          <td class="num" style="font-weight:600">€ 4,338.00</td>
+        </tr>
+        <tr>
+          <td><div class="id">CC-1003</div></td>
+          <td>Finance</td><td>Finance &amp; Business Intelligence</td>
+          <td class="num">€ 4,200.00</td><td class="num">€ 66.00</td>
+          <td class="num" style="font-weight:600">€ 4,266.00</td>
+        </tr>
+        <tr>
+          <td><div class="id">CC-1004</div></td>
+          <td>Engineering</td><td>Enterprise Architecture</td>
+          <td class="num">€ 3,180.00</td><td class="num">€ 66.00</td>
+          <td class="num" style="font-weight:600">€ 3,246.00</td>
+        </tr>
+        <tr>
+          <td><div class="id">CC-1005</div></td>
+          <td>Enterprise IT</td><td>Digital Workplace</td>
+          <td class="num">€ 5,940.00</td><td class="num">€ 132.00</td>
+          <td class="num" style="font-weight:600">€ 6,072.00</td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td class="muted">(Unassigned)</td>
+          <td class="muted">—</td><td class="muted">— Sandbox missing labels</td>
+          <td class="num">€ 1,635.00</td><td class="num">€ 0.00</td>
+          <td class="num" style="font-weight:600;color:#BB0000">€ 1,635.00</td>
+        </tr>
+      </tbody>
+      <tfoot>
+        <tr style="background:#FAFAFB;font-weight:600">
+          <td colspan="3" style="text-align:right;padding:12px 14px;border-top:2px solid #354A5F;color:#1D2D3E">Total</td>
+          <td class="num" style="border-top:2px solid #354A5F;color:#1D2D3E">€ 24,295.00</td>
+          <td class="num" style="border-top:2px solid #354A5F;color:#1D2D3E">€ 660.00</td>
+          <td class="num" style="border-top:2px solid #354A5F;color:#1D2D3E">€ 24,955.00</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+</body>
+</html>

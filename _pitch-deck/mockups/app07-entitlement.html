@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Entitlement &amp; License Optimization</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>.tiles-row { grid-template-columns: repeat(6, 1fr); }</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">Entitlement &amp; License Optimization</div>
+    <div class="right"><span>acme global account</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>Entitlement &amp; License Optimization</h1>
+    <div class="sub">Hard ROI for the renewal conversation — utilization curves with downgrade recommendations</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Entitlements</div><div class="value">37</div></div>
+    <div class="tile crit"><div class="label">Underutilized</div><div class="value">8</div></div>
+    <div class="tile crit"><div class="label">Overutilized</div><div class="value">2</div></div>
+    <div class="tile crit"><div class="label">Renewals &lt; 60d</div><div class="value">4</div></div>
+    <div class="tile ok"><div class="label">Est. Annual Saving</div><div class="value" style="font-size:24px;line-height:1.2">€ 86,280</div></div>
+    <div class="tile"><div class="label">History Window</div><div class="value" style="color:#1D2D3E;font-size:24px;line-height:1.2">12 mo</div></div>
+  </div>
+
+  <div class="toolbar">
+    <span style="font-size:12px;color:#556B82">History window</span>
+    <select style="padding:6px 10px;border:1px solid #BCC4CB;border-radius:6px;font-size:12px;background:white"><option>Last 12 months</option></select>
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">All Entitlements <span class="badge">37</span></div>
+    <div class="tab">Renewals <span class="badge">4</span></div>
+    <div class="tab">Contract Anchors</div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Service</th><th>Plan</th><th>Unit</th>
+          <th class="num">Entitled</th><th class="num">Avg</th><th class="num">Peak</th>
+          <th class="num">Utilization</th><th>Recommendation</th>
+          <th class="num">Suggested</th><th class="num">Annual Saving</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="id">SAP HANA Cloud</div><div class="muted" style="font-size:11px">ELASTIC_SERVICE</div></td>
+          <td>hana</td><td>GB</td>
+          <td class="num">50</td><td class="num">32.4</td><td class="num">38</td>
+          <td class="num"><span class="status ok">64.8 %</span></td>
+          <td><span class="status ok">KEEP</span></td>
+          <td class="num">50</td><td class="num muted">—</td>
+        </tr>
+        <tr>
+          <td><div class="id">SAP Build Work Zone</div><div class="muted" style="font-size:11px">ELASTIC_SERVICE</div></td>
+          <td>standard</td><td>Users</td>
+          <td class="num">300</td><td class="num">75.2</td><td class="num">92</td>
+          <td class="num"><span class="status warn">25.1 %</span></td>
+          <td><span class="status warn">DOWNGRADE</span></td>
+          <td class="num">140</td><td class="num"><span class="num-state ok">€ 2,880</span></td>
+        </tr>
+        <tr>
+          <td><div class="id">SAP Integration Suite</div><div class="muted" style="font-size:11px">QUOTA_BASED</div></td>
+          <td>enterprise_agreement</td><td>K Calls</td>
+          <td class="num">200</td><td class="num">168</td><td class="num">191</td>
+          <td class="num"><span class="status crit">84.0 %</span></td>
+          <td><span class="status crit">INVESTIGATE</span></td>
+          <td class="num">200</td><td class="num muted">—</td>
+        </tr>
+        <tr style="background:#FFF9E5">
+          <td><div class="id">SAP Analytics Cloud</div><div class="muted" style="font-size:11px">ELASTIC_SERVICE</div></td>
+          <td>standard</td><td>Users</td>
+          <td class="num">100</td><td class="num">18.8</td><td class="num">22</td>
+          <td class="num"><span class="status warn">18.8 %</span></td>
+          <td><span class="status warn">DOWNGRADE</span></td>
+          <td class="num">35</td><td class="num"><span class="num-state ok">€ 23,400</span></td>
+        </tr>
+        <tr>
+          <td><div class="id">Cloud Foundry Runtime</div><div class="muted" style="font-size:11px">ELASTIC_SERVICE</div></td>
+          <td>standard</td><td>GB</td>
+          <td class="num">100</td><td class="num">66</td><td class="num">78</td>
+          <td class="num"><span class="status ok">66.0 %</span></td>
+          <td><span class="status ok">KEEP</span></td>
+          <td class="num">100</td><td class="num muted">—</td>
+        </tr>
+        <tr>
+          <td><div class="id">SAP BTP, Kyma Runtime</div><div class="muted" style="font-size:11px">ELASTIC_SERVICE</div></td>
+          <td>azure</td><td>Node-Hours</td>
+          <td class="num">1,000</td><td class="num">698</td><td class="num">810</td>
+          <td class="num"><span class="status ok">69.8 %</span></td>
+          <td><span class="status ok">KEEP</span></td>
+          <td class="num">1,000</td><td class="num muted">—</td>
+        </tr>
+        <tr style="background:#FFF9E5">
+          <td><div class="id">SAP Datasphere</div><div class="muted" style="font-size:11px">QUOTA_BASED</div></td>
+          <td>standard</td><td>Cap. Units</td>
+          <td class="num">10</td><td class="num">3.4</td><td class="num">5</td>
+          <td class="num"><span class="status warn">34.0 %</span></td>
+          <td><span class="status warn">DOWNGRADE</span></td>
+          <td class="num">5</td><td class="num"><span class="num-state ok">€ 60,000</span></td>
+        </tr>
+        <tr>
+          <td><div class="id">SAP Event Mesh</div><div class="muted" style="font-size:11px">ELASTIC_SERVICE</div></td>
+          <td>default</td><td>GB</td>
+          <td class="num">50</td><td class="num">18</td><td class="num">25</td>
+          <td class="num"><span class="status ok">36.0 %</span></td>
+          <td><span class="status ok">KEEP</span></td>
+          <td class="num">50</td><td class="num muted">—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>BTP AI Services Governance</title>
+<link rel="stylesheet" href="_styles.css" />
+<style>.tiles-row { grid-template-columns: repeat(6, 1fr); }</style>
+</head>
+<body>
+<div class="page">
+  <div class="shellbar">
+    <div class="logo">SAP BTP</div>
+    <div class="app">AI Services Governance Console</div>
+    <div class="right"><span>acme.ai.eu-central-1</span><div class="avatar">NJ</div></div>
+  </div>
+
+  <div class="page-title-bar">
+    <h1>AI Services Governance</h1>
+    <div class="sub">What people are actually doing with GenAI — and whether it's safe</div>
+  </div>
+
+  <div class="tiles-row">
+    <div class="tile info"><div class="label">Active Deployments</div><div class="value">14</div></div>
+    <div class="tile"><div class="label">Models in Use</div><div class="value" style="color:#1D2D3E">8</div></div>
+    <div class="tile"><div class="label">Monthly Spend</div><div class="value" style="color:#1D2D3E;font-size:24px;line-height:1.2">€ 23,840</div></div>
+    <div class="tile crit"><div class="label">Configs w/o Filter</div><div class="value">3</div></div>
+    <div class="tile crit"><div class="label">Configs w/o Masking</div><div class="value">5</div></div>
+    <div class="tile crit"><div class="label">Alerts (7d)</div><div class="value">11</div></div>
+  </div>
+
+  <div class="toolbar">
+    <div class="spacer"></div>
+    <button class="btn">↻ Refresh</button>
+    <button class="btn">⬇ Export</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Orchestration Configs <span class="badge">3</span></div>
+    <div class="tab">Deployments <span class="badge">14</span></div>
+    <div class="tab">Model Spend</div>
+    <div class="tab">Alerts <span class="badge">11</span></div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Template</th><th>Scenario</th><th>Model</th>
+          <th>Input Filter</th><th>Output Filter</th><th>Masking</th>
+          <th>Grounding</th><th>Compliant</th><th>Violations</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="id">finance-doc-summarizer</div><div class="muted" style="font-size:11px">cfg-001</div></td>
+          <td>orchestration</td><td>gpt-4o</td>
+          <td><span class="status ok">on</span></td><td><span class="status ok">on</span></td><td><span class="status ok">on</span></td>
+          <td>disabled</td>
+          <td><span class="status ok">compliant</span></td>
+          <td class="muted">—</td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><div class="id">customer-email-drafts</div><div class="muted" style="font-size:11px">cfg-002</div></td>
+          <td>orchestration</td><td>claude-3-7-sonnet</td>
+          <td><span class="status ok">on</span></td><td><span class="status crit">off</span></td><td><span class="status crit">off</span></td>
+          <td>disabled</td>
+          <td><span class="status crit">non-compliant</span></td>
+          <td>output filter missing · data masking missing</td>
+        </tr>
+        <tr>
+          <td><div class="id">kb-embedding-pipeline</div><div class="muted" style="font-size:11px">cfg-003</div></td>
+          <td>document-grounding</td><td>text-embedding-3-large</td>
+          <td><span class="status muted">n/a</span></td><td><span class="status muted">n/a</span></td><td><span class="status muted">n/a</span></td>
+          <td>vector-db</td>
+          <td><span class="status ok">compliant</span></td>
+          <td class="muted">—</td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><div class="id">sandbox-experiment</div><div class="muted" style="font-size:11px">cfg-004</div></td>
+          <td>orchestration</td><td>gemini-1.5-pro</td>
+          <td><span class="status crit">off</span></td><td><span class="status crit">off</span></td><td><span class="status crit">off</span></td>
+          <td>disabled</td>
+          <td><span class="status crit">non-compliant</span></td>
+          <td>input filter missing · output filter missing · data masking missing</td>
+        </tr>
+        <tr>
+          <td><div class="id">support-l1-bot</div><div class="muted" style="font-size:11px">cfg-005</div></td>
+          <td>orchestration</td><td>claude-3-7-sonnet</td>
+          <td><span class="status ok">on</span></td><td><span class="status ok">on</span></td><td><span class="status ok">on</span></td>
+          <td>document-store</td>
+          <td><span class="status ok">compliant</span></td>
+          <td class="muted">—</td>
+        </tr>
+        <tr>
+          <td><div class="id">contract-redlining</div><div class="muted" style="font-size:11px">cfg-006</div></td>
+          <td>orchestration</td><td>claude-3-7-sonnet</td>
+          <td><span class="status ok">on</span></td><td><span class="status ok">on</span></td><td><span class="status ok">on</span></td>
+          <td>document-store</td>
+          <td><span class="status ok">compliant</span></td>
+          <td class="muted">—</td>
+        </tr>
+        <tr style="background:#FFF5F5">
+          <td><div class="id">hr-resume-screen</div><div class="muted" style="font-size:11px">cfg-007</div></td>
+          <td>orchestration</td><td>gpt-4o</td>
+          <td><span class="status ok">on</span></td><td><span class="status ok">on</span></td><td><span class="status crit">off</span></td>
+          <td>disabled</td>
+          <td><span class="status crit">non-compliant</span></td>
+          <td>data masking missing</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+</body>
+</html>

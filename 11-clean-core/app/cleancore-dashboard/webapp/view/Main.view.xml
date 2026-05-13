@@ -1,0 +1,65 @@
+<mvc:View
+  controllerName="com.btpconsulting.cleancore.controller.Main"
+  xmlns="sap.m"
+  xmlns:mvc="sap.ui.core.mvc"
+  xmlns:l="sap.ui.layout"
+  xmlns:core="sap.ui.core">
+
+  <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
+
+    <l:Grid containerQuery="true" defaultSpan="L2 M4 S6" hSpacing="1" vSpacing="1" class="sapUiSmallMargin">
+      <GenericTile header="{i18n>kpiTotal}"        frameType="OneByOne"><TileContent><NumericContent value="{cleancore>/summary/totalExtensions}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiClean}"        frameType="OneByOne"><TileContent><NumericContent value="{cleancore>/summary/cleanCount}" valueColor="Good" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiKeyUser}"      frameType="OneByOne"><TileContent><NumericContent value="{cleancore>/summary/keyUserCount}" valueColor="Critical" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiSideBySide}"   frameType="OneByOne"><TileContent><NumericContent value="{cleancore>/summary/sideBySideCount}" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiModification}" frameType="OneByOne"><TileContent><NumericContent value="{cleancore>/summary/inStackModCount}" valueColor="Error" /></TileContent></GenericTile>
+      <GenericTile header="{i18n>kpiCompliance}"   frameType="OneByOne"><TileContent unit="%"><NumericContent value="{cleancore>/summary/compliancePct}" valueColor="Good" /></TileContent></GenericTile>
+    </l:Grid>
+
+    <Toolbar>
+      <Label text="{i18n>labelSystem}" />
+      <Select selectedKey="{cleancore>/systemId}" change="onSystemChange">
+        <items>
+          <core:Item key="S4P" text="S4P (Production)" />
+          <core:Item key="S4Q" text="S4Q (QA)" />
+          <core:Item key="S4D" text="S4D (Dev)" />
+        </items>
+      </Select>
+      <ToolbarSpacer />
+      <Button text="{i18n>btnScan}"    icon="sap-icon://syntax"          press="onScan" type="Emphasized" />
+      <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
+      <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
+    </Toolbar>
+
+    <Table items="{cleancore>/extensions}" growing="true" growingThreshold="200">
+      <columns>
+        <Column><Text text="{i18n>colSeverity}" /></Column>
+        <Column><Text text="{i18n>colClassification}" /></Column>
+        <Column><Text text="{i18n>colType}" /></Column>
+        <Column><Text text="{i18n>colName}" /></Column>
+        <Column><Text text="{i18n>colPackage}" /></Column>
+        <Column><Text text="{i18n>colReleased}" /></Column>
+        <Column><Text text="{i18n>colViolations}" /></Column>
+        <Column><Text text="{i18n>colModifiedBy}" /></Column>
+        <Column><Text text="{i18n>colModifiedAt}" /></Column>
+      </columns>
+      <items>
+        <ColumnListItem>
+          <cells>
+            <ObjectStatus text="{cleancore>severity}"
+                          state="{= ${cleancore>severity} === 'error' ? 'Error' : ${cleancore>severity} === 'warn' ? 'Warning' : 'Information' }" />
+            <ObjectStatus text="{cleancore>classification}"
+                          state="{= ${cleancore>classification} === 'CLEAN' ? 'Success' : ${cleancore>classification} === 'SIDE_BY_SIDE' ? 'Information' : ${cleancore>classification} === 'KEY_USER_EXT' ? 'Warning' : 'Error' }" />
+            <Text text="{cleancore>objectType}" />
+            <ObjectIdentifier title="{cleancore>objectName}" />
+            <Text text="{cleancore>packageName}" />
+            <CheckBox selected="{cleancore>releasedApiOnly}" enabled="false" />
+            <Text text="{= ${cleancore>violations}.join(' · ') }" />
+            <Text text="{cleancore>lastModifiedBy}" />
+            <Text text="{cleancore>lastModifiedAt}" />
+          </cells>
+        </ColumnListItem>
+      </items>
+    </Table>
+  </Page>
+</mvc:View>

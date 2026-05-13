@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-cert-expiry",
+  "tenant-mode": "dedicated",
+  "description": "BTP Trust Config & Cert Expiry Console — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.CertViewer", "description": "Read cert inventory and expiry alerts" },
+    { "name": "$XSAPPNAME.CertAdmin",  "description": "Manage alert thresholds and acknowledge expiring certs" }
+  ],
+  "role-templates": [
+    { "name": "CertViewer", "description": "View cert inventory",
+      "scope-references": ["$XSAPPNAME.CertViewer"] },
+    { "name": "CertAdmin",  "description": "Manage thresholds and acknowledgements",
+      "scope-references": ["$XSAPPNAME.CertViewer", "$XSAPPNAME.CertAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP Cert Expiry Viewer",
+      "description": "Read-only access to the cert expiry console",
+      "role-template-references": ["$XSAPPNAME.CertViewer"] },
+    { "name": "BTP Cert Expiry Administrator",
+      "description": "Manage thresholds and acknowledgements",
+      "role-template-references": ["$XSAPPNAME.CertAdmin"] }
+  ]
+}

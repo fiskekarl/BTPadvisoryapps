@@ -1,0 +1,27 @@
+{
+  "xsappname": "btp-cost-allocation",
+  "tenant-mode": "dedicated",
+  "description": "BTP Cost Allocation & Showback Engine — XSUAA security descriptor",
+  "oauth2-configuration": {
+    "redirect-uris": ["https://*.hana.ondemand.com/**"],
+    "credential-types": ["binding-secret", "x509"]
+  },
+  "scopes": [
+    { "name": "$XSAPPNAME.CostViewer", "description": "Read cost trees and chargeback reports" },
+    { "name": "$XSAPPNAME.CostAdmin",  "description": "Manage chargeback policies and shared-service splits" }
+  ],
+  "role-templates": [
+    { "name": "CostViewer", "description": "View cost allocation tree",
+      "scope-references": ["$XSAPPNAME.CostViewer"] },
+    { "name": "CostAdmin",  "description": "Viewer + edit chargeback policies",
+      "scope-references": ["$XSAPPNAME.CostViewer", "$XSAPPNAME.CostAdmin"] }
+  ],
+  "role-collections": [
+    { "name": "BTP Cost Allocation Viewer",
+      "description": "Read-only access to cost allocation and chargeback",
+      "role-template-references": ["$XSAPPNAME.CostViewer"] },
+    { "name": "BTP Cost Allocation Administrator",
+      "description": "Manage chargeback policies and split rules",
+      "role-template-references": ["$XSAPPNAME.CostAdmin"] }
+  ]
+}

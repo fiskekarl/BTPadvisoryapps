@@ -1,0 +1,107 @@
+_schema-version: '3.1'
+ID: btp-clean-core
+version: 1.0.0
+description: SAP BTP Clean Core Compliance Dashboard — advisory app (S/4HANA scanner)
+
+parameters:
+  enable-parallel-deployments: true
+  deploy_mode: html5-repo
+
+build-parameters:
+  before-all:
+    - builder: custom
+      commands:
+        - npm ci
+        - npx cds build --production
+        - echo "omit=dev" > gen/srv/.npmrc
+        - npm ci --prefix app/cleancore-dashboard
+
+modules:
+  - name: cleancore-ui
+    type: html5
+    path: app/cleancore-dashboard
+    build-parameters: { builder: custom, commands: [npm run build], supported-platforms: [] }
+
+  - name: cleancore-ui-deployer
+    type: com.sap.application.content
+    path: .
+    requires: [{ name: cleancore-html5-repo-host, parameters: { content-target: true } }]
+    build-parameters:
+      build-result: resources/
+      requires: [{ name: cleancore-ui, artifacts: [cleancore-dashboard.zip], target-path: resources/ }]
+
+  - name: cleancore-srv
+    type: nodejs
+    path: gen/srv
+    parameters: { memory: 512M, disk-quota: 1024M, instances: 1 }
+    requires:
+      - name: cleancore-xsuaa
+      - name: cleancore-connectivity
+      - name: cleancore-destination-service
+    provides:
+      - name: cleancore-srv-api
+        public: true
+        properties: { srv-url: ${default-url} }
+
+  - name: cleancore-destination-content
+    type: com.sap.application.content
+    requires:
+      - { name: cleancore-destination-service, parameters: { content-target: true } }
+      - { name: cleancore-xsuaa, parameters: { service-key: { name: cleancore-xsuaa-key } } }
+      - { name: cleancore-html5-repo-host, parameters: { service-key: { name: cleancore-html5-repo-host-key } } }
+    parameters:
+      content:
+        instance:
+          destinations:
+            - Authentication: OAuth2UserTokenExchange
+              Name: cleancore-srv-destination
+              HTML5.ForwardAuthToken: true
+              TokenServiceInstanceName: cleancore-xsuaa
+              TokenServiceKeyName: cleancore-xsuaa-key
+              URL: ~{cleancore-srv-api/srv-url}
+              sap.cloud.service: com.btpconsulting.cleancore
+            # Customer-specific — placeholder. Update during per-client deploy
+            # via mta-ext to point at the customer's S/4HANA Cloud Connector
+            # virtual host + the ATC scanner package endpoint.
+            - Authentication: BasicAuthentication
+              Name: s4-cleancore-scanner
+              ProxyType: OnPremise
+              URL: http://virtual-s4-host:8000/sap/bc/rest/btp-advisory/cleancore-scan
+              Type: HTTP
+              Description: S/4HANA ATC clean-core scanner endpoint (override per client)
+              User: <override-per-client>
+          existing_destinations_policy: update
+    build-parameters: { no-source: true }
+
+resources:
+  - name: cleancore-xsuaa
+    type: com.sap.xs.uaa
+    parameters:
+      service: xsuaa
+      service-plan: application
+      path: ./xs-security.json
+      config:
+        xsappname: btp-clean-core-${org}-${space}
+        tenant-mode: dedicated
+
+  # Required to reach S/4 on-prem via Cloud Connector
+  - name: cleancore-connectivity
+    type: org.cloudfoundry.managed-service
+    parameters: { service: connectivity, service-plan: lite }
+
+  - name: cleancore-html5-repo-host
+    type: org.cloudfoundry.managed-service
+    parameters: { service: html5-apps-repo, service-plan: app-host }
+
+  - name: cleancore-destination-service
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: destination
+      service-plan: lite
+      config:
+        HTML5Runtime_enabled: true
+        init_data:
+          instance:
+            existing_destinations_policy: update
+            destinations:
+              - { Name: ui5, Description: SAP UI5 CDN, URL: https://ui5.sap.com, Type: HTTP, ProxyType: Internet, Authentication: NoAuthentication }
