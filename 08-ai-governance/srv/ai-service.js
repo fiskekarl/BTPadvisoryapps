@@ -85,11 +85,42 @@ class AiService extends cds.ApplicationService {
 
     // ── getSpend ─────────────────────────────────────────────────────────────
     //
-    // AI Core spend data is exposed via UAS under service "ai-core" — that
-    // data is not differentiated by model. The accurate way to attribute spend
-    // per model is from AI Core's metrics API, not implemented here in v1.
-    // For demo purposes we approximate with mock + UAS aggregate when bound.
-    this.on('getSpend', async (req) => mockSpend(req.data?.months || 6));
+    // Per-model EUR spend is an *estimate*, not a billing figure:
+    //   tokens (real, from AI Core /v2/lm/metrics)
+    //   × per-model rate from MODEL_RATE_CARD (SAP-published list prices,
+    //     not the customer's contracted rate)
+    //
+    // The aggregation walks every resource group, fetches metrics for the
+    // requested window, then groups by (yearMonth, model) and applies the
+    // rate card. When AI Core is unreachable or returns nothing we fall
+    // back to mock spend so the dashboard still demos.
+    this.on('getSpend', async (req) => {
+      const months = Math.min(Math.max(req.data?.months || 6, 1), 24);
+      if (!ai.hasCredentials()) return mockSpend(months);
+
+      try {
+        const groups = await ai.listResourceGroups();
+        if (!groups.length) return mockSpend(months);
+
+        const fromIso = monthsAgoIso(months);
+        const toIso   = new Date().toISOString();
+        const all = [];
+        for (const g of groups) {
+          try {
+            const m = await ai.fetchMetrics(g.resourceGroupId || g.id, fromIso, toIso);
+            for (const row of m) all.push(row);
+          } catch (e) {
+            LOG.warn(`Metrics skip RG ${g.id}: ${e.message}`);
+          }
+        }
+
+        const aggregated = aggregateMetricsToSpend(all);
+        return aggregated.length ? aggregated : mockSpend(months);
+      } catch (e) {
+        LOG.warn(`AI Core metrics fetch failed: ${e.message} — falling back to mock spend.`);
+        return mockSpend(months);
+      }
+    });
 
     // ── getAlerts ────────────────────────────────────────────────────────────
     this.on('getAlerts', async (req) => {
@@ -142,8 +173,117 @@ function inferProvider(modelName) {
   return 'Unknown';
 }
 
+// ─── Spend estimation rate card ──────────────────────────────────────────────
+//
+// EUR per million tokens. These are SAP-published list prices as of
+// the rollout date. They are NOT the customer's contracted rate — actual
+// billed spend lives in SAP's internal billing system. Use these to
+// surface *relative* per-model spend, not invoice figures.
+//
+// To update: edit this map; no API call.
+const MODEL_RATE_CARD = {
+  'gpt-4o':                  { inEur: 4.55,  outEur: 13.65 },
+  'gpt-4-turbo':             { inEur: 9.10,  outEur: 27.30 },
+  'gpt-3.5-turbo':           { inEur: 0.45,  outEur: 1.35  },
+  'claude-3-7-sonnet':       { inEur: 2.73,  outEur: 13.65 },
+  'claude-3-5-sonnet':       { inEur: 2.73,  outEur: 13.65 },
+  'claude-3-opus':           { inEur: 13.65, outEur: 68.25 },
+  'gemini-1.5-pro':          { inEur: 1.14,  outEur: 4.55  },
+  'mistral-large-2':         { inEur: 1.82,  outEur: 5.46  },
+  'text-embedding-3-large':  { inEur: 0.12,  outEur: 0     },
+  'text-embedding-3-small':  { inEur: 0.018, outEur: 0     },
+};
+const UNKNOWN_MODEL_RATE     = { inEur: 1.00, outEur: 3.00 };
+
+function rateFor(modelName) {
+  return MODEL_RATE_CARD[modelName] || UNKNOWN_MODEL_RATE;
+}
+
+function estimateCost(modelName, tokensIn, tokensOut) {
+  const r = rateFor(modelName);
+  return Math.round(((tokensIn / 1e6) * r.inEur + (tokensOut / 1e6) * r.outEur) * 100) / 100;
+}
+
+function monthsAgoIso(months) {
+  const d = new Date();
+  d.setMonth(d.getMonth() - months);
+  d.setDate(1);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+// Pull a "sub-field" out of a metric resource — AI Core wraps tokens at
+// either the top level (.tokensIn / .tokensOut), in metricResources[]
+// (with name "Tokens" / "Output Tokens"), or in customMetrics[]. We try
+// every shape and return null when none is present.
+function extractTokens(row) {
+  const out = { in: 0, out: 0, model: null, ts: null };
+
+  // Direct fields seen in some response variants
+  if (typeof row.tokensIn  === 'number') out.in  = row.tokensIn;
+  if (typeof row.tokensOut === 'number') out.out = row.tokensOut;
+  if (row.modelName) out.model = row.modelName;
+  if (row.startTime || row.timestamp) out.ts = row.startTime || row.timestamp;
+
+  const mr = row.metricResources || row.metrics || [];
+  for (const m of mr) {
+    const name = (m.name || '').toLowerCase();
+    const val  = Number(m.value || 0);
+    if (!val) continue;
+    if (/output.*token|tokens?\.out|completion/.test(name)) out.out += val;
+    else if (/input.*token|tokens?\.in|prompt/.test(name))  out.in  += val;
+    else if (/total.*token|^tokens?$/.test(name))            out.in  += val;
+    if (Array.isArray(m.labels)) {
+      for (const l of m.labels) {
+        if (l.name === 'Model' || l.name === 'model') out.model = out.model || l.value;
+      }
+    }
+  }
+  if (!out.model && Array.isArray(row.metricLabels)) {
+    for (const l of row.metricLabels) {
+      if (l.name === 'Model' || l.name === 'model') out.model = l.value;
+    }
+  }
+  if (out.in === 0 && out.out === 0) return null;
+  return out;
+}
+
+function aggregateMetricsToSpend(metricRows) {
+  // Group by (yearMonth, model). Returns SpendRow[] in the same shape as
+  // mockSpend so the dashboard binding is unchanged.
+  const buckets = new Map();
+  for (const row of metricRows) {
+    const t = extractTokens(row);
+    if (!t || !t.ts || !t.model) continue;
+    const ym = String(t.ts).slice(0, 7); // 'YYYY-MM'
+    const key = `${ym}::${t.model}`;
+    if (!buckets.has(key)) {
+      buckets.set(key, {
+        yearMonth:     ym,
+        modelProvider: inferProvider(t.model),
+        modelName:     t.model,
+        tokensIn:      0,
+        tokensOut:     0,
+      });
+    }
+    const b = buckets.get(key);
+    b.tokensIn  += t.in;
+    b.tokensOut += t.out;
+  }
+  const out = [];
+  for (const b of buckets.values()) {
+    out.push({ ...b, costEur: estimateCost(b.modelName, b.tokensIn, b.tokensOut) });
+  }
+  return out.sort((a, b) =>
+    a.yearMonth === b.yearMonth ? a.modelName.localeCompare(b.modelName) : a.yearMonth.localeCompare(b.yearMonth)
+  );
+}
+
 module.exports = AiService;
-module.exports.__test__ = { inferProvider };
+module.exports.__test__ = {
+  inferProvider, MODEL_RATE_CARD, UNKNOWN_MODEL_RATE,
+  rateFor, estimateCost, monthsAgoIso, extractTokens, aggregateMetricsToSpend,
+};
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 function mockDeployments() {

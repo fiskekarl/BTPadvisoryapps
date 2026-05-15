@@ -67,4 +67,20 @@ async function listConfigurations(rgId) {
   return data?.resources || data?.value || data || [];
 }
 
-module.exports = { hasCredentials, listResourceGroups, listDeployments, listConfigurations };
+/**
+ * Fetch usage metrics for one resource group between two ISO timestamps.
+ * Returns the raw `value` / `resources` array of metric resources — the
+ * shape varies between AI Core versions, so callers must handle the
+ * payload defensively.
+ *
+ * Endpoint: GET /v2/lm/metrics
+ * Filter:   $filter=startTime ge <fromIso> and startTime le <toIso>
+ * (See SAP AI Core REST API reference, "Metrics" section.)
+ */
+async function fetchMetrics(rgId, fromIso, toIso) {
+  const filter = encodeURIComponent(`startTime ge ${fromIso} and startTime le ${toIso}`);
+  const data = await aiGet(`/v2/lm/metrics?$filter=${filter}`, rgId);
+  return data?.resources || data?.value || (Array.isArray(data) ? data : []);
+}
+
+module.exports = { hasCredentials, listResourceGroups, listDeployments, listConfigurations, fetchMetrics };

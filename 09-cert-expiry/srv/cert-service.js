@@ -81,13 +81,98 @@ async function loadDestinationCerts() {
 
 // ─── Source: IAS certs ───────────────────────────────────────────────────────
 //
-// IAS exposes its SAML signing & encryption certs at:
-//   GET /Trust  → returns trust configurations with embedded cert PEMs.
-// Same IAS_* env vars as app #4.
+// IAS exposes its trust-configurations (the SPs that trust IAS as IdP, and
+// the upstream IdPs IAS itself trusts) at:
+//   GET /Trust   → list of trust configurations with embedded cert material
+//
+// Cert material lives at one of several locations depending on the trust
+// type (SAML vs OIDC, inline vs metadata-derived). We probe all known
+// shapes and skip any candidate that doesn't decode to a valid X.509 cert,
+// so a partial response from a single trust never poisons the whole scan.
+//
+// Auth: re-uses the IAS_* env vars from app #4. When unset the scan
+// returns []; the service then falls back to mock data for demo mode.
+const _iasTokenCache = { token: null, expiresAt: 0 };
+async function getIasToken() {
+  if (_iasTokenCache.token && Date.now() < _iasTokenCache.expiresAt) return _iasTokenCache.token;
+  const url = process.env.IAS_OAUTH_URL || `${process.env.IAS_API_URL}/oauth2/token`;
+  const resp = await axios.post(url, new URLSearchParams({
+    grant_type:    'client_credentials',
+    client_id:     process.env.IAS_CLIENT_ID,
+    client_secret: process.env.IAS_CLIENT_SECRET,
+  }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 });
+  _iasTokenCache.token     = resp.data.access_token;
+  _iasTokenCache.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;
+  return _iasTokenCache.token;
+}
+
+async function iasGet(path) {
+  const token = await getIasToken();
+  const resp = await axios.get(`${process.env.IAS_API_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    timeout: 30_000,
+  });
+  return resp.data;
+}
+
+function collectCertCandidates(trust) {
+  const c = [];
+  const push = (v) => { if (v) c.push(v); };
+  push(trust.signingCertificate);
+  push(trust.certificate);
+  push(trust.samlMetadata?.signingCertificate);
+  push(trust.samlMetadata?.encryptionCertificate);
+  push(trust.openIdConnectConfiguration?.publicKey);
+  if (Array.isArray(trust.signingCertificates))                  c.push(...trust.signingCertificates);
+  if (Array.isArray(trust.samlMetadata?.signingCertificates))    c.push(...trust.samlMetadata.signingCertificates);
+  if (Array.isArray(trust.samlMetadata?.encryptionCertificates)) c.push(...trust.samlMetadata.encryptionCertificates);
+  return c;
+}
+
+function parseCertCandidate(candidate) {
+  // A candidate may be a raw PEM string, a base64-wrapped PEM, or an object
+  // with the cert under .value / .certificate / .content. We coerce all of
+  // these into a Buffer that crypto.X509Certificate can ingest.
+  const raw = typeof candidate === 'string'
+    ? candidate
+    : (candidate?.value || candidate?.certificate || candidate?.content);
+  if (!raw || typeof raw !== 'string') return null;
+  try {
+    const buf = raw.includes('BEGIN CERTIFICATE') ? Buffer.from(raw) : Buffer.from(raw, 'base64');
+    return parsePem(buf);
+  } catch { return null; }
+}
+
 async function loadIasCerts() {
   if (!process.env.IAS_API_URL || !process.env.IAS_CLIENT_ID || !process.env.IAS_CLIENT_SECRET) return [];
-  // TODO: implement IAS OAuth + GET /Trust + parse cert PEMs.
-  return [];
+  const tenantHost = process.env.IAS_API_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const out = [];
+
+  let data;
+  try { data = await iasGet('/Trust'); }
+  catch (e) {
+    cds.log('cert-service').warn(`IAS /Trust fetch failed: ${e.message}`);
+    return [];
+  }
+
+  const items = Array.isArray(data) ? data
+              : (data?.values || data?.trustConfigurations || []);
+  for (const t of items) {
+    const trustName = t.name || t.displayName || t.id || t.providerId || 'unnamed-trust';
+    for (const cand of collectCertCandidates(t)) {
+      const parsed = parseCertCandidate(cand);
+      if (!parsed) continue;
+      out.push({
+        kind:           'IAS_SAML',
+        subaccountId:   'ias-tenant',
+        subaccountName: tenantHost,
+        name:           trustName,
+        ...parsed,
+        blastRadius:    `IAS trust "${trustName}" — affects all federated apps relying on this trust`,
+      });
+    }
+  }
+  return out;
 }
 
 // ─── Source: XSUAA trust configs ─────────────────────────────────────────────
@@ -204,7 +289,12 @@ function lookupOwner(cert, registry) {
 }
 
 module.exports = CertService;
-module.exports.__test__ = { daysUntil, severityFor, parsePem, lookupOwner };
+module.exports.__test__ = {
+  daysUntil, severityFor, parsePem, lookupOwner,
+  collectCertCandidates, parseCertCandidate, loadIasCerts,
+  // expose so tests can clear the IAS OAuth cache between runs
+  _resetIasTokenCache: () => { _iasTokenCache.token = null; _iasTokenCache.expiresAt = 0; },
+};
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockCerts() {

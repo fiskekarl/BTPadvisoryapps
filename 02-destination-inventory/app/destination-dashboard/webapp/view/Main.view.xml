@@ -42,6 +42,7 @@
               <Column><Text text="{i18n>colUrl}"          /></Column>
               <Column><Text text="{i18n>colCertExpiry}"   /></Column>
               <Column><Text text="{i18n>colDaysToExpiry}" /></Column>
+              <Column><Text text="Reachable" /></Column>
             </columns>
             <items>
               <ColumnListItem>
@@ -56,6 +57,9 @@
                   <Text text="{destinv>certNotAfter}" />
                   <ObjectNumber number="{destinv>daysToExpiry}"
                                 state="{= ${destinv>daysToExpiry} == null ? 'None' : ${destinv>daysToExpiry} &lt;= 14 ? 'Error' : ${destinv>daysToExpiry} &lt;= 60 ? 'Warning' : 'Success' }" />
+                  <ObjectStatus text="{destinv>lastTestStatus}"
+                                state="{= ${destinv>lastTestStatus} === 'OK' ? 'Success' : ${destinv>lastTestStatus} === 'NOT_PROBED' || ${destinv>lastTestStatus} === 'UNKNOWN' ? 'None' : ${destinv>lastTestStatus} === 'TIMEOUT' ? 'Warning' : 'Error' }"
+                                tooltip="OK: target responded 2xx-3xx within 5s. AUTH_FAILED: dest service rejected creds (401/403). UNREACHABLE: 4xx/5xx or network error. TIMEOUT: no response in 5s. NOT_PROBED: skipped because OnPremise / RFC / mTLS — these need Cloud Connector or keystore handling we don't replay." />
                 </cells>
               </ColumnListItem>
             </items>
