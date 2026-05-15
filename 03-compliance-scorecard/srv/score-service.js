@@ -220,7 +220,21 @@ function buildScorecard({ rules, subaccounts, destinations }) {
     const evaluator = evaluators[rule.kind];
     if (!evaluator) continue;
     let params; try { params = JSON.parse(rule.paramsJson || '{}'); } catch { params = {}; }
-    const ruleFindings = evaluator(params, { subaccounts, destinations });
+
+    // A single misconfigured rule (well-formed JSON but missing the field
+    // an evaluator expects — e.g. `allowed` for destination-auth-allowlist)
+    // must NOT crash the whole scorecard. Emit an error-finding so the
+    // operator sees the broken rule in the UI, and keep going.
+    let ruleFindings;
+    try { ruleFindings = evaluator(params, { subaccounts, destinations }); }
+    catch (e) {
+      ruleFindings = subaccounts.map((s) => ({
+        subaccountId: s.subaccountId,
+        passed:       false,
+        summary:      `Rule "${rule.id}" failed to evaluate: ${e.message}`,
+        detailJson:   JSON.stringify({ error: e.message, kind: rule.kind, paramsJson: rule.paramsJson || '{}' }),
+      }));
+    }
     for (const f of ruleFindings) {
       const sub = subaccounts.find((s) => s.subaccountId === f.subaccountId);
       findings.push({

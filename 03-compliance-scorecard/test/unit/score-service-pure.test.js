@@ -61,6 +61,58 @@ describe('buildScorecard', () => {
     expect(out.findings).to.be.an('array');
   });
 
+  it('tolerates a well-formed but incomplete params (regression: PR #4 bug)', () => {
+    // destination-auth-allowlist used to crash with
+    // "Cannot read properties of undefined (reading 'includes')"
+    // when `allowed` was missing — taking down the entire getScorecard.
+    const out = buildScorecard({
+      rules: [{
+        id:         'BAD_ALLOWLIST',
+        title:      'Misconfigured allowlist',
+        kind:       'destination-auth-allowlist',
+        severity:   'error',
+        paramsJson: '{"scope":"prod"}',  // no `allowed` array → defaults to []
+      }],
+      subaccounts,
+      destinations,
+    });
+    expect(out).to.have.property('findings');
+    // Subaccounts WITH destinations now fail (every dest is non-allow-listed
+    // against the empty allow-list). Subaccounts with zero destinations
+    // vacuously pass. Either way: no crash.
+    const sub001 = out.findings.find((f) => f.subaccountId === 'sub-001');
+    expect(sub001).to.exist;
+    expect(sub001.passed).to.equal(false);
+  });
+
+  it('a rule that throws inside its evaluator does not crash the whole scorecard', () => {
+    // Stitch a custom evaluator that always throws; buildScorecard must
+    // surface error findings and continue with subsequent rules.
+    const { evaluators } = require('../../srv/rules/registry');
+    const orig = evaluators['__test_throw'];
+    evaluators['__test_throw'] = () => { throw new Error('boom'); };
+
+    try {
+      const out = buildScorecard({
+        rules: [
+          { id: 'BAD',  title: 'Throws',  kind: '__test_throw',    severity: 'error', paramsJson: '{}' },
+          { id: 'GOOD', title: 'Healthy', kind: 'label-required',  severity: 'warn',
+            paramsJson: '{"scope":"prod","label":"costCenter"}' },
+        ],
+        subaccounts,
+        destinations,
+      });
+      const bad = out.findings.filter((f) => f.ruleId === 'BAD');
+      expect(bad.length).to.equal(subaccounts.length);
+      expect(bad[0].summary).to.match(/failed to evaluate.*boom/);
+      // The healthy rule should still produce findings.
+      const good = out.findings.filter((f) => f.ruleId === 'GOOD');
+      expect(good.length).to.be.greaterThan(0);
+    } finally {
+      if (orig) evaluators['__test_throw'] = orig; else delete evaluators['__test_throw'];
+    }
+  });
+
   it('records subaccountCount and ruleCount accurately', () => {
     const out = buildScorecard({
       rules: Object.values(canonicalRules),
