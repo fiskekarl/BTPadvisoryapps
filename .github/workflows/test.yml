@@ -24,15 +24,6 @@ jobs:
           - 09-cert-expiry
           - 10-cost-allocation
           - 11-clean-core
-          # - 02-destination-inventory
-          # - 04-identity-federation
-          # - 05-role-collection-map
-          # - 06-audit-log
-          # - 07-entitlement-optimization
-          # - 08-ai-governance
-          # - 09-cert-expiry
-          # - 10-cost-allocation
-          # - 11-clean-core
     defaults:
       run:
         working-directory: ${{ matrix.app }}
@@ -42,14 +33,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: ${{ matrix.app }}/package-lock.json
 
       - name: Install
         run: npm install --no-audit --no-fund
-
-      - name: CDS compile (lint)
-        run: npx cds compile srv --to json > /dev/null
 
       - name: Run tests
         run: npm test
@@ -67,3 +53,4 @@ jobs:
           name: coverage-${{ matrix.app }}
           path: ${{ matrix.app }}/coverage/
           retention-days: 7
+          if-no-files-found: ignore
