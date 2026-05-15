@@ -16,7 +16,11 @@ async function getOAuthToken(uaa) {
   if (cache.token && Date.now() < cache.expiresAt) return cache.token;
   const resp = await axios.post(`${uaa.url}/oauth/token`,
     new URLSearchParams({ grant_type: 'client_credentials', client_id: uaa.clientid, client_secret: uaa.clientsecret }).toString(),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    {
+      headers:      { 'Content-Type': 'application/x-www-form-urlencoded' },
+      timeout:      30_000,
+      maxRedirects: 0,
+    });
   cache.token     = resp.data.access_token;
   cache.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;
   return cache.token;
@@ -48,8 +52,9 @@ function getDestinationKeys() {
 async function destApiGet(creds, path) {
   const token = await getOAuthToken(creds.uaa);
   const resp = await axios.get(`${creds.uri}${path}`, {
-    headers: { Authorization: `Bearer ${token}` },
-    timeout: 30_000,
+    headers:      { Authorization: `Bearer ${token}` },
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   return resp.data;
 }
@@ -122,7 +127,7 @@ async function probeDestination(creds, dest, { timeoutMs = 5_000 } = {}) {
     const token = await getOAuthToken(creds.uaa);
     const resolved = await axios.get(
       `${creds.uri}/destination-configuration/v1/destinations/${encodeURIComponent(dest.name)}`,
-      { headers: { Authorization: `Bearer ${token}` }, timeout: timeoutMs }
+      { headers: { Authorization: `Bearer ${token}` }, timeout: timeoutMs, maxRedirects: 0 }
     );
     const url = resolved.data?.destinationConfiguration?.URL || dest.url;
     if (!url) return 'UNREACHABLE';

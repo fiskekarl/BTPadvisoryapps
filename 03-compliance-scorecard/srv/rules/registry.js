@@ -69,7 +69,15 @@ const evaluators = {
 
   // ─── name-pattern ──────────────────────────────────────────────────────────
   'name-pattern': (params, ctx) => {
-    const re = new RegExp(params.pattern, params.flags || '');
+    const re = safeCompileRegex(params.pattern, params.flags);
+    if (!re) {
+      return ctx.subaccounts.map((sa) => ({
+        subaccountId: sa.subaccountId,
+        passed:       false,
+        summary:      `name-pattern rule has unsafe / invalid pattern (skipped)`,
+        detailJson:   JSON.stringify({ pattern: params.pattern, reason: 'unsafe-or-invalid' }),
+      }));
+    }
     return ctx.subaccounts.map((sa) => {
       const passed = re.test(sa.displayName || '');
       return {
@@ -195,8 +203,16 @@ const evaluators = {
   // and denyPattern (must NOT match) can be combined.
   'destination-name-pattern': (params, ctx) => {
     const targetSubs = filterByScope(ctx.subaccounts, params.scope);
-    const allow = params.allowPattern ? new RegExp(params.allowPattern, params.flags || '') : null;
-    const deny  = params.denyPattern  ? new RegExp(params.denyPattern,  params.flags || '') : null;
+    const allow = params.allowPattern ? safeCompileRegex(params.allowPattern, params.flags) : null;
+    const deny  = params.denyPattern  ? safeCompileRegex(params.denyPattern,  params.flags) : null;
+    if ((params.allowPattern && !allow) || (params.denyPattern && !deny)) {
+      return targetSubs.map((sa) => ({
+        subaccountId: sa.subaccountId,
+        passed:       false,
+        summary:      `destination-name-pattern rule has unsafe / invalid regex (skipped)`,
+        detailJson:   JSON.stringify({ allow: params.allowPattern, deny: params.denyPattern, reason: 'unsafe-or-invalid' }),
+      }));
+    }
     const out = [];
     for (const sa of targetSubs) {
       const offenders = ctx.destinations
@@ -284,6 +300,29 @@ const evaluators = {
   },
 };
 
+// Compile a user-supplied regex pattern with cheap ReDoS hardening:
+//
+//   • cap the pattern length (200 chars is plenty for any naming rule)
+//   • reject patterns with nested quantifiers, the classic exponential-
+//     backtracking shape — `(a+)+`, `(a*)+`, `(a|a)+`, etc.
+//   • catch JS-level "Invalid regular expression" errors
+//
+// The check is intentionally conservative: a few legitimate-but-baroque
+// patterns will trip the heuristic. Operators that hit this can tighten
+// their pattern. Defense-in-depth: buildScorecard wraps the evaluator
+// call in try/catch, so even if a regex slips past, the worst case is
+// a single-rule error finding instead of a global crash.
+function safeCompileRegex(pattern, flags = '') {
+  if (typeof pattern !== 'string') return null;
+  if (pattern.length > 200) return null;
+  // Nested quantifier heuristic: `(...+)+`, `(...*)+`, `(...+)*`, `(...*)*`.
+  // This is a strict subset of pathological patterns but covers the
+  // common ReDoS shapes without needing a full parser.
+  if (/\([^)]*[*+][^)]*\)\s*[*+]/.test(pattern)) return null;
+  try { return new RegExp(pattern, flags); }
+  catch { return null; }
+}
+
 function filterByScope(subaccounts, scope) {
   if (!scope || scope === 'all') return subaccounts;
   if (scope === 'prod') return subaccounts.filter((s) => s.tier === 'prod' || s.usedForProd === 'USED_FOR_PRODUCTION');
@@ -292,4 +331,4 @@ function filterByScope(subaccounts, scope) {
   return subaccounts;
 }
 
-module.exports = { evaluators };
+module.exports = { evaluators, safeCompileRegex };

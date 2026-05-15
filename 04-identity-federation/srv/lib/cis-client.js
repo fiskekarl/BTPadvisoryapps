@@ -15,7 +15,8 @@ async function listSubaccounts(creds) {
   const baseUrl = creds.endpoints?.accounts_service_url || creds.url;
   const resp = await axios.get(`${baseUrl}/accounts/v1/subaccounts`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    timeout: 30_000,
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   return resp.data?.value ?? [];
 }

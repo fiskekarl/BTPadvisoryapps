@@ -16,7 +16,11 @@ async function getIasToken() {
     grant_type:    'client_credentials',
     client_id:     process.env.IAS_CLIENT_ID,
     client_secret: process.env.IAS_CLIENT_SECRET,
-  }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+  }).toString(), {
+    headers:      { 'Content-Type': 'application/x-www-form-urlencoded' },
+    timeout:      30_000,
+    maxRedirects: 0,
+  });
   _iasTokenCache.token     = resp.data.access_token;
   _iasTokenCache.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;
   return _iasTokenCache.token;
@@ -25,8 +29,9 @@ async function getIasToken() {
 async function iasGet(path) {
   const token = await getIasToken();
   const resp = await axios.get(`${process.env.IAS_API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    timeout: 30_000,
+    headers:      { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   return resp.data;
 }

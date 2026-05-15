@@ -41,7 +41,11 @@ async function getOAuthToken(uaa) {
   if (c.token && Date.now() < c.expiresAt) return c.token;
   const resp = await axios.post(`${uaa.url}/oauth/token`,
     new URLSearchParams({ grant_type: 'client_credentials', client_id: uaa.clientid, client_secret: uaa.clientsecret }).toString(),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    {
+      headers:      { 'Content-Type': 'application/x-www-form-urlencoded' },
+      timeout:      30_000,
+      maxRedirects: 0,
+    });
   c.token     = resp.data.access_token;
   c.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;
   return c.token;
@@ -56,7 +60,9 @@ async function loadDestinationCerts() {
     try {
       const token = await getOAuthToken(k.uaa);
       const data  = await axios.get(`${k.uri}/destination-configuration/v1/subaccountDestinations`, {
-        headers: { Authorization: `Bearer ${token}` }, timeout: 30_000,
+        headers:      { Authorization: `Bearer ${token}` },
+        timeout:      30_000,
+        maxRedirects: 0,
       });
       const items = Array.isArray(data.data) ? data.data : (data.data?.destinationConfigurations ?? []);
       for (const d of items) {
@@ -101,7 +107,11 @@ async function getIasToken() {
     grant_type:    'client_credentials',
     client_id:     process.env.IAS_CLIENT_ID,
     client_secret: process.env.IAS_CLIENT_SECRET,
-  }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 });
+  }).toString(), {
+    headers:      { 'Content-Type': 'application/x-www-form-urlencoded' },
+    timeout:      30_000,
+    maxRedirects: 0,
+  });
   _iasTokenCache.token     = resp.data.access_token;
   _iasTokenCache.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;
   return _iasTokenCache.token;
@@ -110,8 +120,9 @@ async function getIasToken() {
 async function iasGet(path) {
   const token = await getIasToken();
   const resp = await axios.get(`${process.env.IAS_API_URL}${path}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    timeout: 30_000,
+    headers:      { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   return resp.data;
 }
@@ -217,8 +228,9 @@ async function loadXsuaaTrustCerts() {
     try {
       const token = await getOAuthToken(k.uaa);
       const resp = await axios.get(`${k.apiurl}/sap/rest/authorization/v2/trust-configurations`, {
-        headers: { Authorization: `Bearer ${token}` },
-        timeout: 30_000,
+        headers:      { Authorization: `Bearer ${token}` },
+        timeout:      30_000,
+        maxRedirects: 0,
       });
       const trusts = resp.data?.trustConfigurations
                   || resp.data?.value
@@ -262,8 +274,9 @@ async function loadCtmsCerts() {
   let resp;
   try {
     resp = await axios.get(`${process.env.CTMS_URL}/v2/landscapeIdentities`, {
-      headers: { Authorization: `Bearer ${process.env.CTMS_TOKEN}` },
-      timeout: 30_000,
+      headers:      { Authorization: `Bearer ${process.env.CTMS_TOKEN}` },
+      timeout:      30_000,
+      maxRedirects: 0,
     });
   } catch (e) {
     cds.log('cert-service').warn(`cTMS landscapeIdentities scan failed: ${e.message}`);

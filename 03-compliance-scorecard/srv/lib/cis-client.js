@@ -15,7 +15,8 @@ async function cisGet(creds, baseKey, path) {
   const baseUrl = creds.endpoints?.[baseKey] || creds.url;
   const resp = await axios.get(`${baseUrl}${path}`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    timeout: 30_000,
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   return resp.data;
 }

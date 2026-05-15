@@ -44,8 +44,9 @@ async function uasGet(creds, path) {
   const token = await getOAuthToken(creds.uaa);
   const url   = creds.target_url || creds.url;
   const resp  = await axios.get(`${url}${path}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    timeout: 30_000,
+    headers:      { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   return resp.data;
 }

@@ -20,8 +20,10 @@ function loadKeys() {
 async function authedGet(uaa, baseUrl, path) {
   const token = await getOAuthToken(uaa);
   const resp = await axios.get(`${baseUrl}${path}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    timeout: 30_000, validateStatus: (s) => s < 500,
+    headers:        { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    timeout:        30_000,
+    maxRedirects:   0,
+    validateStatus: (s) => s < 500,
   });
   if (resp.status >= 400) {
     const err = new Error(`${baseUrl}${path} → HTTP ${resp.status}`);

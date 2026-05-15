@@ -27,7 +27,11 @@ async function getToken() {
     grant_type:    'client_credentials',
     client_id:     process.env.AI_CORE_CLIENT_ID,
     client_secret: process.env.AI_CORE_CLIENT_SECRET,
-  }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+  }).toString(), {
+    headers:      { 'Content-Type': 'application/x-www-form-urlencoded' },
+    timeout:      30_000,
+    maxRedirects: 0,
+  });
   _token.value     = resp.data.access_token;
   _token.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;
   return _token.value;
@@ -43,7 +47,10 @@ async function aiGet(path, rgId) {
   const headers = { Authorization: `Bearer ${token}`, Accept: 'application/json' };
   if (rgId) headers['AI-Resource-Group'] = rgId;
   const resp = await axios.get(`${process.env.AI_CORE_URL}${path}`, {
-    headers, timeout: 30_000, validateStatus: (s) => s < 500,
+    headers,
+    timeout:        30_000,
+    maxRedirects:   0,
+    validateStatus: (s) => s < 500,
   });
   if (resp.status >= 400) {
     const err = new Error(`AI Core ${path} → HTTP ${resp.status}`);

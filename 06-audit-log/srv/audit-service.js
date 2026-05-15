@@ -15,7 +15,11 @@ async function fetchCtmsDeployments(fromIso) {
   try {
     const resp = await axios.get(
       `${process.env.CTMS_URL}/v2/nodes/imports?from=${encodeURIComponent(fromIso)}`,
-      { headers: { Authorization: `Bearer ${process.env.CTMS_TOKEN}` }, timeout: 30_000 }
+      {
+        headers:      { Authorization: `Bearer ${process.env.CTMS_TOKEN}` },
+        timeout:      30_000,
+        maxRedirects: 0,
+      }
     );
     return resp.data?.value || resp.data || [];
   } catch (e) {
