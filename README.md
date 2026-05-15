@@ -316,3 +316,55 @@ RUNBOOK-client-deploy.md   Per-client delivery checklist (11 steps)
 ## Pitch deck
 
 A 20-slide PowerPoint pitch deck is included at [`_pitch-deck/BTP-Advisory-Pitch.pptx`](_pitch-deck/BTP-Advisory-Pitch.pptx). Source for the deck is [`_pitch-deck/build-deck.js`](_pitch-deck/build-deck.js) — regenerate with `node build-deck.js`.
+
+---
+
+## Testing
+
+Every app has a test suite gated by GitHub Actions CI ([`.github/workflows/test.yml`](.github/workflows/test.yml)). The pilot app `03-compliance-scorecard` carries the canonical [`test/README.md`](03-compliance-scorecard/test/README.md) with the layout, conventions, and rollout playbook.
+
+| App | Tests | Coverage focus |
+|---|---:|---|
+| `01-subaccount-lifecycle`     |  32 | pure helpers (`inferTier`, `fingerprint`, `isoDaysAgo`), oauth-cache, cis-client, drift integration |
+| `02-destination-inventory`    |  13 | `daysUntil`, `parseCertNotAfter`, `getDestinationKeys`, basic-auth-in-prod findings |
+| `03-compliance-scorecard`     |  36 | all rule evaluators, `buildScorecard`, `gradeFor`, `runScan` persistence |
+| `04-identity-federation`      |  27 | `pemNotAfter`, `daysUntil`, `hasIasCredentials`, cis-client, integration |
+| `05-role-collection-map`      |  29 | `inferTier`, `loadAssignments` (sinon-stubbed), toxic-finding integration |
+| `06-audit-log`                |  19 | `inWindow` time-band logic, anomaly rules, integration |
+| `07-entitlement-optimization` |  37 | UAS client, `ymOffset`, multi-month fetch race, integration |
+| `08-ai-governance`            |  18 | `inferProvider`, AI Core client, integration |
+| `09-cert-expiry`              |  18 | `severityFor`, `lookupOwner`, sorted integration result |
+| `10-cost-allocation`          |  39 | UAS client, cost split, `currentYM`, integration |
+| `11-clean-core`               |   9 | `classify` heuristics, scan-run persistence |
+| **Total**                     | **277** | |
+
+### Toolchain (uniform across all 11 apps)
+
+- **Mocha** (test runner) + **Chai** (assertions) + **Sinon** (spies/stubs) + **Nock** (HTTP interception) + **c8** (V8-native coverage)
+- **`@sap/cds/lib`'s `cds.test`** for OData integration tests against the `[development]` profile (`auth: dummy`, in-memory SQLite)
+- **`module.exports.__test__ = { ... }`** seam on each service file exposes pure helpers for direct unit testing without booting CAP
+
+### Common commands (in any app dir)
+
+```bash
+npm test                  # everything: unit + integration
+npm run test:unit         # pure-function tests only (< 2s)
+npm run test:integration  # cds.test against the in-memory service
+npm run test:coverage     # writes lcov + text summary
+```
+
+### Layout (identical in every app)
+
+```
+<app>/
+├── .mocharc.json       (copied verbatim across apps)
+├── .c8rc.json          (copied verbatim across apps)
+└── test/
+    ├── helpers/
+    │   ├── fixtures.js     (per-app data fixtures)
+    │   └── nock-helpers.js (largely portable; per-app endpoint helpers added)
+    ├── unit/               (pure helpers + lib unit tests with nock)
+    └── integration/        (cds.test OData round-trips in mock-mode)
+```
+
+For details and how to add a new app to the suite, see [`03-compliance-scorecard/test/README.md`](03-compliance-scorecard/test/README.md).
