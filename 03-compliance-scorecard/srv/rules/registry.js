@@ -174,17 +174,18 @@ const evaluators = {
   // PrincipalPropagation).
   'destination-auth-allowlist': (params, ctx) => {
     const targetSubs = filterByScope(ctx.subaccounts, params.scope);
+    const allowed = Array.isArray(params.allowed) ? params.allowed : [];
     const out = [];
     for (const sa of targetSubs) {
       const offenders = ctx.destinations
         .filter((d) => d.subaccountId === sa.subaccountId)
-        .filter((d) => !params.allowed.includes(d.authentication));
+        .filter((d) => !allowed.includes(d.authentication));
       out.push(offenders.length === 0
         ? { subaccountId: sa.subaccountId, passed: true,
             summary: `All destinations use an allow-listed auth method`, detailJson: '{}' }
         : { subaccountId: sa.subaccountId, passed: false,
             summary: `${offenders.length} destination(s) on ${sa.displayName} use a non-allow-listed auth method`,
-            detailJson: JSON.stringify({ offenders: offenders.map((d) => ({ name: d.name, auth: d.authentication })), allowed: params.allowed }) });
+            detailJson: JSON.stringify({ offenders: offenders.map((d) => ({ name: d.name, auth: d.authentication })), allowed }) });
     }
     return out;
   },
