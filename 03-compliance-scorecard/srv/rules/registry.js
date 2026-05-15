@@ -55,7 +55,7 @@ const evaluators = {
   'max-days-inactive': (params, ctx) => {
     return ctx.subaccounts.map((sa) => {
       const days = sa.daysInactive ?? 0;
-      const passed = days < (params.maxDays || 90);
+      const passed = days <= (params.maxDays || 90);
       return {
         subaccountId: sa.subaccountId,
         passed,
