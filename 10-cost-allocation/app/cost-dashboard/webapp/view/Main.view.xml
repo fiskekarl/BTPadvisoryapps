@@ -19,6 +19,13 @@
       <Label text="{i18n>labelMonth}" />
       <Input value="{cost>/yearMonth}" placeholder="YYYY-MM" width="120px" />
       <ToolbarSpacer />
+      <ObjectStatus
+        text="{= ${cost>/summary/dataSource} === 'live' ? 'Live data' : ${cost>/summary/dataSource} === 'mixed' ? 'Mixed (partial creds)' : 'Mock data' }"
+        state="{= ${cost>/summary/dataSource} === 'live' ? 'Success' : ${cost>/summary/dataSource} === 'mixed' ? 'Warning' : 'Error' }"
+        icon="{= ${cost>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when both CIS_CREDENTIALS and UAS_CREDENTIALS are bound; mixed if only one." />
+      <Label text="Synced:" />
+      <Text text="{path: 'cost>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
       <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
     </Toolbar>

@@ -141,6 +141,10 @@ class EntitleService extends cds.ApplicationService {
       const in60 = new Date(today); in60.setDate(today.getDate() + 60);
       const in60Iso = in60.toISOString().slice(0, 10);
 
+      const dataSource = cisCreds && uasCreds ? 'live'
+                       : cisCreds || uasCreds ? 'mixed'
+                       : 'mock';
+
       return {
         totalEntitlements:     rows.length,
         underutilized:         finite.filter((r) => r.utilizationPct < 35).length,
@@ -148,6 +152,8 @@ class EntitleService extends cds.ApplicationService {
         renewalsNext60d:       rows.filter((r) => r.renewalDate && r.renewalDate <= in60Iso).length,
         estimatedAnnualSaving: Math.round(saving * 100) / 100,
         currency:              rows[0]?.currency || 'EUR',
+        dataSource,
+        lastSyncAt:            new Date().toISOString(),
       };
     });
 

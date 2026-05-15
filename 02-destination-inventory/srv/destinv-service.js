@@ -198,6 +198,8 @@ class DestinvService extends cds.ApplicationService {
         certsExpiring14d:  dests.filter((d) => d.daysToExpiry !== null && d.daysToExpiry <= 14).length,
         findings:          open.length,
         criticalFindings:  open.filter((f) => f.severity === 'error').length,
+        dataSource:        keys && keys.length > 0 ? 'live' : 'mock',
+        lastSyncAt:        new Date().toISOString(),
       };
     });
 

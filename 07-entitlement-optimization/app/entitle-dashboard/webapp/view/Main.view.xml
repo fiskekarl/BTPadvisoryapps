@@ -26,6 +26,13 @@
         </items>
       </Select>
       <ToolbarSpacer />
+      <ObjectStatus
+        text="{= ${entitle>/summary/dataSource} === 'live' ? 'Live data' : ${entitle>/summary/dataSource} === 'mixed' ? 'Mixed (partial creds)' : 'Mock data' }"
+        state="{= ${entitle>/summary/dataSource} === 'live' ? 'Success' : ${entitle>/summary/dataSource} === 'mixed' ? 'Warning' : 'Error' }"
+        icon="{= ${entitle>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when both CIS_CREDENTIALS and UAS_CREDENTIALS are bound; mixed if only one." />
+      <Label text="Synced:" />
+      <Text text="{path: 'entitle>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
       <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
     </Toolbar>

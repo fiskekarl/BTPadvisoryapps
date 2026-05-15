@@ -34,6 +34,12 @@ sap.ui.define([
 
     onRefresh: function () { this._loadAll(); },
 
+    formatSyncTime: function (iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); }
+      catch (e) { return iso; }
+    },
+
     onRunScan: async function () {
       const label = await new Promise((resolve) =>
         MessageBox.prompt('Snapshot label?', { initialValue: `Scan ${new Date().toISOString()}` },

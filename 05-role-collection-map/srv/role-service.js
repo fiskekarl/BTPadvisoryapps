@@ -201,6 +201,8 @@ class RoleService extends cds.ApplicationService {
         crossTierUsers:       crossTier,
         toxicFindings:        open.length,
         criticalFindings:     open.filter((f) => f.severity === 'error').length,
+        dataSource:           sa.loadKeys().length > 0 ? 'live' : 'mock',
+        lastSyncAt:           new Date().toISOString(),
       };
     });
 

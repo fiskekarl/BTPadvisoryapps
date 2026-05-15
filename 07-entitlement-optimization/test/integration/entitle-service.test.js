@@ -34,6 +34,12 @@ describe('EntitleService (integration)', () => {
     expect(data.estimatedAnnualSaving).to.be.a('number');
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/entitle/getSummary(months=12)');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('getRenewalAlerts() returns rows whose renewal falls within the window', async () => {
     const { data } = await GET('/odata/v4/entitle/getRenewalAlerts(daysAhead=365)');
     expect(data.value).to.be.an('array');

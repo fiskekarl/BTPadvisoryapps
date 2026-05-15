@@ -63,6 +63,12 @@ sap.ui.define([
 
     onRefresh: function () { this._loadAll(); },
 
+    formatSyncTime: function (iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); }
+      catch (e) { return iso; }
+    },
+
     onUserPress: function (oEvent) {
       const ctx = oEvent.getSource().getBindingContext('role');
       const u = ctx.getObject();

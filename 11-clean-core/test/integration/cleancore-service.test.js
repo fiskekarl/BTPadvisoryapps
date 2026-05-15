@@ -25,6 +25,12 @@ describe('CleanCoreService (integration)', () => {
     expect(data.compliancePct).to.be.within(0, 100);
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/clean-core/getSummary()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('runScan persists a ScanRun and returns a run id', async () => {
     const before = (await GET('/odata/v4/clean-core/ScanRuns')).data.value.length;
     const { data: result } = await POST('/odata/v4/clean-core/runScan', { systemId: 'TEST' });

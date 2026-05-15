@@ -42,4 +42,10 @@ describe('AuditService (integration)', () => {
       'failedActions', 'activeSubaccounts', 'uniqueActors'
     );
   });
+
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/audit/getSummary()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
 });

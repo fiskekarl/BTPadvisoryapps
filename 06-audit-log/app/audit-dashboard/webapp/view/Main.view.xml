@@ -27,6 +27,13 @@
         </items>
       </Select>
       <ToolbarSpacer />
+      <ObjectStatus
+        text="{= ${audit>/summary/dataSource} === 'live' ? 'Live data' : ${audit>/summary/dataSource} === 'mixed' ? 'Mixed (partial creds)' : 'Mock data' }"
+        state="{= ${audit>/summary/dataSource} === 'live' ? 'Success' : ${audit>/summary/dataSource} === 'mixed' ? 'Warning' : 'Error' }"
+        icon="{= ${audit>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when both SUBACCOUNT_KEYS (auditLog entries) and CTMS_* env vars are set; mixed if only one." />
+      <Label text="Synced:" />
+      <Text text="{path: 'audit>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
       <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
     </Toolbar>

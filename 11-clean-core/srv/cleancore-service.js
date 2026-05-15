@@ -102,6 +102,16 @@ class CleanCoreService extends cds.ApplicationService {
       const rows = await this.send('getExtensions', { systemId: null });
       const total = rows.length;
       const clean = rows.filter((r) => r.classification === 'CLEAN').length;
+      // 'live' iff Cloud SDK is bound AND at least one persisted ScanRun exists
+      // (the latter is how we know the scanner has actually been reached).
+      let hasRuns = false;
+      try {
+        const r = await cds.db.run(
+          SELECT.one`count(*) as n`.from('com.btpconsulting.cleancore.ScanRun')
+        );
+        hasRuns = (r?.n || 0) > 0;
+      } catch { /* ignore */ }
+      const dataSource = executeHttpRequest && hasRuns ? 'live' : 'mock';
       return {
         totalExtensions:    total,
         cleanCount:         clean,
@@ -110,6 +120,8 @@ class CleanCoreService extends cds.ApplicationService {
         inStackModCount:    rows.filter((r) => r.classification === 'IN_STACK_MOD').length,
         unreleasedApiCount: rows.filter((r) => r.releasedApiOnly === false).length,
         compliancePct:      total ? Math.round((clean / total) * 10000) / 100 : 0,
+        dataSource,
+        lastSyncAt:         new Date().toISOString(),
       };
     });
 

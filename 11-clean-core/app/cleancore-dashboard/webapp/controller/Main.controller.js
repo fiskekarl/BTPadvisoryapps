@@ -36,6 +36,12 @@ sap.ui.define([
     onSystemChange: function () { this._loadAll(); },
     onRefresh:      function () { this._loadAll(); },
 
+    formatSyncTime: function (iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); }
+      catch (e) { return iso; }
+    },
+
     onScan: async function () {
       const sys = this._model().getProperty('/systemId') || 'S4P';
       MessageBox.confirm(`Run ATC clean-core scan against ${sys}? Can take 10-30 minutes.`, {

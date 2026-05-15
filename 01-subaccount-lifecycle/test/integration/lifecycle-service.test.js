@@ -34,6 +34,12 @@ describe('LifecycleService (integration)', () => {
     expect(data.stoppedSubaccounts).to.be.a('number');
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/lifecycle/getSummary()');
+    expect(data.dataSource).to.equal('mock'); // no creds in test env
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('getAuditActivity() returns mock events when subaccount keys are absent', async () => {
     const { data } = await GET("/odata/v4/lifecycle/getAuditActivity(subaccountId=null,days=30)");
     expect(data.value).to.be.an('array').with.length.greaterThan(0);

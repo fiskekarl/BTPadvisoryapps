@@ -46,6 +46,8 @@ service ScoreService {
     ruleCount       : Integer;
     perSubaccount   : array of ScoreRow;
     findings        : array of FindingRow;
+    dataSource      : String(10); // 'live' | 'mixed' | 'mock'
+    lastSyncAt      : String(30); // ISO 8601 timestamp of this scorecard's compute
   }
 
   /** Run all enabled rules and return the live scorecard (no DB write). */

@@ -16,6 +16,13 @@
     </l:Grid>
 
     <Toolbar>
+      <ObjectStatus
+        text="{= ${ai>/summary/dataSource} === 'live' ? 'Live data' : 'Mock data' }"
+        state="{= ${ai>/summary/dataSource} === 'live' ? 'Success' : 'Error' }"
+        icon="{= ${ai>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when AI_CORE_* env vars are set; mock otherwise. Note: per-model EUR spend is an estimate until the AI Core metrics API exposes it directly." />
+      <Label text="Synced:" />
+      <Text text="{path: 'ai>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <ToolbarSpacer />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
       <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />

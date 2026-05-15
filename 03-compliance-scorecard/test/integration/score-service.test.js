@@ -32,6 +32,12 @@ describe('ScoreService (integration)', () => {
     expect(data.overallGrade).to.match(/^[A-F]$/);
   });
 
+  it('getScorecard() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/score/getScorecard()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('runScan persists a ScoreSnapshot and returns a UUID', async () => {
     const before = (await GET('/odata/v4/score/ScoreSnapshots')).data.value.length;
 

@@ -93,6 +93,9 @@ class CostService extends cds.ApplicationService {
       const total = rows.reduce((s, r) => s + r.cost, 0);
       const allocated = rows.filter((r) => r.costCenter).reduce((s, r) => s + r.cost, 0);
       const unallocated = total - allocated;
+      const dataSource = cisCreds && uasCreds ? 'live'
+                       : cisCreds || uasCreds ? 'mixed'
+                       : 'mock';
       return {
         totalCost:       Math.round(total * 100) / 100,
         currency:        rows[0]?.currency || 'EUR',
@@ -101,6 +104,8 @@ class CostService extends cds.ApplicationService {
         businessUnits:   new Set(rows.map((r) => r.buName).filter(Boolean)).size,
         departments:     new Set(rows.map((r) => r.department).filter(Boolean)).size,
         unallocatedCost: Math.round(unallocated * 100) / 100,
+        dataSource,
+        lastSyncAt:      new Date().toISOString(),
       };
     });
 

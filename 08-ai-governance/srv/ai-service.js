@@ -122,6 +122,8 @@ class AiService extends cds.ApplicationService {
         configsWithoutFilter:    configs.filter((c) => !c.hasInputFilter || !c.hasOutputFilter).length,
         configsWithoutMasking:   configs.filter((c) => !c.hasMasking).length,
         promptInjectionAlerts7d: alerts.length,
+        dataSource:              ai.hasCredentials() ? 'live' : 'mock',
+        lastSyncAt:              new Date().toISOString(),
       };
     });
 

@@ -304,6 +304,12 @@ class LifecycleService extends cds.ApplicationService {
 
       const audit30d = await this.send('getAuditActivity', { subaccountId: null, days: 30 });
 
+      const hasCis  = !!cisCreds;
+      const hasKeys = sa.loadKeys().length > 0;
+      const dataSource = hasCis && hasKeys ? 'live'
+                       : hasCis || hasKeys ? 'mixed'
+                       : 'mock';
+
       return {
         totalSubaccounts:    subs.length,
         activeSubaccounts:   subs.filter((s) => s.state === 'STARTED' && (s.daysInactive ?? 0) < 30).length,
@@ -312,6 +318,8 @@ class LifecycleService extends cds.ApplicationService {
         driftFindings:       open.length,
         criticalDrifts:      open.filter((d) => d.severity === 'error').length,
         auditEvents30d:      audit30d.length,
+        dataSource,
+        lastSyncAt:          new Date().toISOString(),
       };
     });
 

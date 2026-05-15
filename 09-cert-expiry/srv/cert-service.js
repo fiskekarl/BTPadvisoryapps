@@ -154,6 +154,13 @@ class CertService extends cds.ApplicationService {
     this.on('getSummary', async () => {
       const certs = await this.send('getCerts');
       const t = await getThresholds();
+      const hasDest = !!process.env.DESTINATION_KEYS;
+      const hasIas  = !!(process.env.IAS_API_URL && process.env.IAS_CLIENT_ID && process.env.IAS_CLIENT_SECRET);
+      const hasXsuaa = !!process.env.XSUAA_KEYS;
+      const sources = [hasDest, hasIas, hasXsuaa].filter(Boolean).length;
+      const dataSource = sources === 0 ? 'mock'
+                       : sources >= 2 ? 'live'
+                       : 'mixed';
       return {
         totalCerts:     certs.length,
         expiredCount:   certs.filter((c) => c.daysToExpiry !== null && c.daysToExpiry < 0).length,
@@ -161,6 +168,8 @@ class CertService extends cds.ApplicationService {
         warn30d:        certs.filter((c) => c.daysToExpiry !== null && c.daysToExpiry >  t.criticalDays && c.daysToExpiry <= t.warnDays).length,
         notice90d:      certs.filter((c) => c.daysToExpiry !== null && c.daysToExpiry >  t.warnDays && c.daysToExpiry <= t.noticeDays).length,
         unacknowledged: certs.filter((c) => !c.acknowledged && c.daysToExpiry !== null && c.daysToExpiry <= t.warnDays).length,
+        dataSource,
+        lastSyncAt:     new Date().toISOString(),
       };
     });
 

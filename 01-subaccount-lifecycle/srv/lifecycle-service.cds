@@ -70,6 +70,8 @@ service LifecycleService {
     driftFindings       : Integer;   // not-ignored
     criticalDrifts      : Integer;   // severity = error, not ignored
     auditEvents30d      : Integer;
+    dataSource          : String(10); // 'live' | 'mixed' | 'mock'
+    lastSyncAt          : String(30); // ISO 8601 timestamp of this summary's compute
   }
 
   // ─── Functions ──────────────────────────────────────────────────────────────

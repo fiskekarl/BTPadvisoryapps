@@ -16,6 +16,13 @@
     </l:Grid>
 
     <Toolbar>
+      <ObjectStatus
+        text="{= ${destinv>/summary/dataSource} === 'live' ? 'Live data' : 'Mock data' }"
+        state="{= ${destinv>/summary/dataSource} === 'live' ? 'Success' : 'Error' }"
+        icon="{= ${destinv>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when DESTINATION_KEYS env var is set; mock otherwise." />
+      <Label text="Synced:" />
+      <Text text="{path: 'destinv>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <ToolbarSpacer />
       <Button text="{i18n>btnPolicy}"  icon="sap-icon://settings"         press="onEditPolicy" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />

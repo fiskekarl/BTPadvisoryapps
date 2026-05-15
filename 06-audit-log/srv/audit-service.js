@@ -147,6 +147,11 @@ class AuditService extends cds.ApplicationService {
     this.on('getSummary', async () => {
       const events = await this.send('getEvents', { days: 30 });
       const anomalies = events.filter((e) => e.anomalyId);
+      const hasAuditKeys = sa.loadKeys().some((k) => k.auditLog);
+      const hasCtms = !!(process.env.CTMS_URL && process.env.CTMS_TOKEN);
+      const dataSource = hasAuditKeys && hasCtms ? 'live'
+                       : hasAuditKeys || hasCtms ? 'mixed'
+                       : 'mock';
       return {
         totalEvents30d:    events.length,
         criticalEvents30d: anomalies.filter((e) => e.anomalySeverity === 'error').length,
@@ -154,6 +159,8 @@ class AuditService extends cds.ApplicationService {
         failedActions:     events.filter((e) => e.outcome === 'failure').length,
         activeSubaccounts: new Set(events.map((e) => e.subaccountId)).size,
         uniqueActors:      new Set(events.map((e) => e.actor).filter(Boolean)).size,
+        dataSource,
+        lastSyncAt:        new Date().toISOString(),
       };
     });
 

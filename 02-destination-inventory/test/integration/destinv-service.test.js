@@ -35,6 +35,12 @@ describe('DestinvService (integration)', () => {
     expect(data.basicAuthCount).to.be.a('number');
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/destinv/getSummary()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('ScanPolicies entity is queryable', async () => {
     const { data } = await GET('/odata/v4/destinv/ScanPolicies');
     expect(data.value).to.be.an('array');

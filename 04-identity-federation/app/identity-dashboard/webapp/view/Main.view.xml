@@ -16,6 +16,13 @@
     </l:Grid>
 
     <Toolbar>
+      <ObjectStatus
+        text="{= ${ident>/summary/dataSource} === 'live' ? 'Live data' : ${ident>/summary/dataSource} === 'mixed' ? 'Mixed (partial creds)' : 'Mock data' }"
+        state="{= ${ident>/summary/dataSource} === 'live' ? 'Success' : ${ident>/summary/dataSource} === 'mixed' ? 'Warning' : 'Error' }"
+        icon="{= ${ident>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when IAS_* env vars and SUBACCOUNT_KEYS are both set; mixed if only one; mock otherwise." />
+      <Label text="Synced:" />
+      <Text text="{path: 'ident>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <ToolbarSpacer />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
       <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />

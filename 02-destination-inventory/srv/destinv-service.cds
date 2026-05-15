@@ -45,6 +45,8 @@ service DestinvService {
     certsExpiring14d   : Integer;
     findings           : Integer;   // not ignored
     criticalFindings   : Integer;
+    dataSource         : String(10); // 'live' | 'mock'
+    lastSyncAt         : String(30); // ISO 8601 timestamp of this summary's compute
   }
 
   function getSummary()      returns DestinvSummary;

@@ -23,6 +23,13 @@
     </l:Grid>
 
     <Toolbar>
+      <ObjectStatus
+        text="{= ${score>/scorecard/dataSource} === 'live' ? 'Live data' : ${score>/scorecard/dataSource} === 'mixed' ? 'Mixed (partial creds)' : 'Mock data' }"
+        state="{= ${score>/scorecard/dataSource} === 'live' ? 'Success' : ${score>/scorecard/dataSource} === 'mixed' ? 'Warning' : 'Error' }"
+        icon="{= ${score>/scorecard/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when CIS_CREDENTIALS and SUBACCOUNT_KEYS are both set; mixed if exactly one; mock otherwise." />
+      <Label text="Synced:" />
+      <Text text="{path: 'score>/scorecard/lastSyncAt', formatter: '.formatSyncTime'}" />
       <ToolbarSpacer />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
       <Button text="{i18n>btnRunScan}" icon="sap-icon://camera"           press="onRunScan" type="Emphasized" />

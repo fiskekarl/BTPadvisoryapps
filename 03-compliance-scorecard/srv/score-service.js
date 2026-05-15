@@ -93,7 +93,16 @@ class ScoreService extends cds.ApplicationService {
     const LOG = cds.log('score-service');
     await seedRules();
 
-    this.on('getScorecard', async () => buildScorecard(await loadAll()));
+    this.on('getScorecard', async () => {
+      const card = buildScorecard(await loadAll());
+      const hasCis  = !!cis.getCisCredentials();
+      const hasKeys = sa.loadKeys().length > 0;
+      card.dataSource = hasCis && hasKeys ? 'live'
+                      : hasCis || hasKeys ? 'mixed'
+                      : 'mock';
+      card.lastSyncAt = new Date().toISOString();
+      return card;
+    });
 
     this.on('runScan', async (req) => {
       const label = req.data?.label || `Scan ${new Date().toISOString()}`;

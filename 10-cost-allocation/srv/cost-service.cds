@@ -56,6 +56,8 @@ service CostService {
     businessUnits      : Integer;
     departments        : Integer;
     unallocatedCost    : Decimal(18, 2);
+    dataSource         : String(10); // 'live' | 'mixed' | 'mock'
+    lastSyncAt         : String(30); // ISO 8601 timestamp of this summary's compute
   }
 
   function getSummary(yearMonth: String) returns CostSummary;

@@ -39,6 +39,12 @@ sap.ui.define([
 
     onRefresh: function () { this._loadAll(); },
 
+    formatSyncTime: function (iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); }
+      catch (e) { return iso; }
+    },
+
     onExport: function () {
       const findings = this._model().getProperty('/findings') || [];
       if (!findings.length) return MessageToast.show('Nothing to export');

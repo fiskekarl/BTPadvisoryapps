@@ -69,6 +69,12 @@ describe('RoleService (integration)', () => {
     expect(data.criticalFindings).to.be.at.least(1); // bob + carol scenarios
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/role/getSummary()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('IgnoreRules entity is queryable (empty by default)', async () => {
     const { data } = await GET('/odata/v4/role/IgnoreRules');
     expect(data.value).to.be.an('array');
