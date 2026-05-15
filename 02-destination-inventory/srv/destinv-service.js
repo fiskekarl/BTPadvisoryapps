@@ -166,6 +166,30 @@ async function probeAll(creds, dests, { concurrency = 5 } = {}) {
   return results;
 }
 
+// ─── mTLS catalog ────────────────────────────────────────────────────────────
+//
+// Per the API Feasibility Check in the BTP-admin POV review: there is no
+// SAP-published API telling us which target systems support mTLS. We
+// maintain a per-engagement catalog of URL/host patterns and pair each
+// with a human-readable note. The catalog is intentionally a code map,
+// not a YAML file — engagements that need to extend it edit this list
+// and redeploy. Operators want a DB-backed editor, that's a follow-up.
+const MTLS_CAPABLE_TARGETS = [
+  { pattern: /(^|\.)successfactors\.com$/i,  description: 'SuccessFactors supports mTLS via /sf/oauth/token with client certs'  },
+  { pattern: /(^|\.)ariba\.com$/i,           description: 'Ariba Network supports mTLS for outbound integrations'              },
+  { pattern: /(^|\.)concursolutions\.com$/i, description: 'Concur supports mTLS authentication'                                 },
+  { pattern: /\.hana\.ondemand\.com$/i,      description: 'SAP-internal cloud services support mTLS via SAP Cloud Root CA chain' },
+  { pattern: /\.s4hana\.ondemand\.com$/i,    description: 'S/4HANA Cloud supports mTLS for outbound (Communication Arrangements)' },
+];
+
+function isMtlsCapableUrl(url) {
+  if (!url) return null;
+  try {
+    const host = new URL(url).hostname;
+    return MTLS_CAPABLE_TARGETS.find((e) => e.pattern.test(host)) || null;
+  } catch { return null; }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function parseCertNotAfter(destCfg) {
   // The destination service returns x509 certs as PEM string in `KeyStoreLocation`
@@ -300,13 +324,45 @@ class DestinvService extends cds.ApplicationService {
           }
         }
 
-        // TODO: DANGLING_TARGET — would require destApiTest (see TODO above)
-        //       to verify last-known status; without that we cannot detect
-        //       targets pointing at decommissioned systems.
+        // DANGLING_TARGET ------------------------------------------------------
+        // Powered by the T1.4 reachability probe — we trust a deliberate
+        // UNREACHABLE result (probe ran and got 4xx/5xx or network error).
+        // TIMEOUT is excluded: a target that's just slow shouldn't be
+        // flagged as dangling. NOT_PROBED also excluded (we never probed).
+        if (policy.flagDanglingTargets && d.lastTestStatus === 'UNREACHABLE') {
+          const k = ignoreKey(d.subaccountId, d.name, 'DANGLING_TARGET');
+          findings.push({
+            code:            'DANGLING_TARGET',
+            severity:        isProd(d) ? 'error' : 'warn',
+            subaccountId:    d.subaccountId,
+            destinationName: d.name,
+            summary:         `Destination "${d.name}" target appears unreachable (probe returned UNREACHABLE)`,
+            detail:          JSON.stringify({ url: d.url, lastTestStatus: d.lastTestStatus }),
+            ignored:         ignoreSet.has(k),
+            ignoreReason:    ignoreSet.get(k) || '',
+          });
+        }
 
-        // TODO: MTLS_AVAILABLE_NOT_USED — needs catalog of which target systems
-        //       support mTLS. Build a YAML registry per engagement and ship
-        //       in db/seed/.
+        // MTLS_AVAILABLE_NOT_USED ---------------------------------------------
+        // For target systems that we KNOW support mTLS (curated catalog),
+        // flag destinations that authenticate weakly (BasicAuth or
+        // OAuth-without-client-cert). ClientCertificateAuthentication +
+        // SAML/Principal flows pass.
+        const mtlsEntry = isMtlsCapableUrl(d.url);
+        if (policy.requireMtlsForProd && mtlsEntry && isProd(d)
+            && !/clientcert|samlassertion|principalpropagation|mtls/i.test(d.authentication || '')) {
+          const k = ignoreKey(d.subaccountId, d.name, 'MTLS_AVAILABLE_NOT_USED');
+          findings.push({
+            code:            'MTLS_AVAILABLE_NOT_USED',
+            severity:        'warn',
+            subaccountId:    d.subaccountId,
+            destinationName: d.name,
+            summary:         `Target supports mTLS but "${d.name}" is using ${d.authentication}`,
+            detail:          JSON.stringify({ url: d.url, authentication: d.authentication, catalog: mtlsEntry.description }),
+            ignored:         ignoreSet.has(k),
+            ignoreReason:    ignoreSet.get(k) || '',
+          });
+        }
       }
 
       return findings;
@@ -352,16 +408,18 @@ module.exports = DestinvService;
 module.exports.__test__ = {
   daysUntil, parseCertNotAfter, getDestinationKeys,
   shouldProbeUrl, buildProbeHeaders, classifyProbeError, probeDestination, probeAll,
+  isMtlsCapableUrl, MTLS_CAPABLE_TARGETS,
   _resetProbeCache: () => _probeCache.clear(),
 };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockDestinations() {
   return [
-    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 's4-erp',         type: 'HTTP', proxyType: 'OnPremise', url: 'https://s4.acme.local',           authentication: 'BasicAuthentication',     description: 'S/4HANA backend',  additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'UNKNOWN' },
-    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'sf-success',     type: 'HTTP', proxyType: 'Internet',  url: 'https://api.successfactors.com', authentication: 'OAuth2ClientCredentials', description: 'SuccessFactors',   additionalProps: '{}', certNotAfter: '2026-06-15', daysToExpiry: 38,   lastTestStatus: 'UNKNOWN' },
-    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'crm-legacy',     type: 'HTTP', proxyType: 'OnPremise', url: 'https://crm-old.acme.local',     authentication: 'ClientCertificateAuthentication', description: 'CRM',     additionalProps: '{}', certNotAfter: '2026-05-19', daysToExpiry: 11,   lastTestStatus: 'UNKNOWN' },
-    { subaccountId: 'sub-002', subaccountName: 'QA',          name: 's4-erp-qa',      type: 'HTTP', proxyType: 'OnPremise', url: 'https://s4-qa.acme.local',       authentication: 'BasicAuthentication',     description: 'S/4HANA QA',       additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'UNKNOWN' },
-    { subaccountId: 'sub-003', subaccountName: 'Dev',         name: 'mock-svc',       type: 'HTTP', proxyType: 'Internet',  url: 'https://mock.acme.dev',          authentication: 'NoAuthentication',        description: 'Mock service',     additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'UNKNOWN' },
+    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 's4-erp',         type: 'HTTP', proxyType: 'OnPremise', url: 'https://s4.acme.local',           authentication: 'BasicAuthentication',     description: 'S/4HANA backend',  additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'NOT_PROBED' },
+    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'sf-success',     type: 'HTTP', proxyType: 'Internet',  url: 'https://api.successfactors.com', authentication: 'OAuth2ClientCredentials', description: 'SuccessFactors',   additionalProps: '{}', certNotAfter: '2026-06-15', daysToExpiry: 38,   lastTestStatus: 'OK' },
+    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'crm-legacy',     type: 'HTTP', proxyType: 'OnPremise', url: 'https://crm-old.acme.local',     authentication: 'ClientCertificateAuthentication', description: 'CRM',     additionalProps: '{}', certNotAfter: '2026-05-19', daysToExpiry: 11,   lastTestStatus: 'NOT_PROBED' },
+    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'decommissioned-erp', type: 'HTTP', proxyType: 'Internet', url: 'https://old.example.com',     authentication: 'NoAuthentication',        description: 'Decommissioned ERP', additionalProps: '{}', certNotAfter: '',     daysToExpiry: null, lastTestStatus: 'UNREACHABLE' },
+    { subaccountId: 'sub-002', subaccountName: 'QA',          name: 's4-erp-qa',      type: 'HTTP', proxyType: 'OnPremise', url: 'https://s4-qa.acme.local',       authentication: 'BasicAuthentication',     description: 'S/4HANA QA',       additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'NOT_PROBED' },
+    { subaccountId: 'sub-003', subaccountName: 'Dev',         name: 'mock-svc',       type: 'HTTP', proxyType: 'Internet',  url: 'https://mock.acme.dev',          authentication: 'NoAuthentication',        description: 'Mock service',     additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'OK' },
   ];
 }

@@ -77,6 +77,8 @@ async function loadDestinations() {
           subaccountName: k.subaccountName,
           name:           d.Name,
           authentication: d.Authentication || 'NoAuthentication',
+          url:            d.URL || '',
+          proxyType:      d.ProxyType || 'Internet',
           tier,
         });
       }
@@ -238,9 +240,10 @@ function mockSubaccounts() {
 
 function mockDestinations() {
   return [
-    { subaccountId: 'sub-001', name: 's4-erp',     authentication: 'BasicAuthentication',         tier: 'prod' },
-    { subaccountId: 'sub-001', name: 'sf-success', authentication: 'OAuth2ClientCredentials',     tier: 'prod' },
-    { subaccountId: 'sub-002', name: 's4-qa',      authentication: 'BasicAuthentication',         tier: 'qa'   },
-    { subaccountId: 'sub-003', name: 'mock-svc',   authentication: 'NoAuthentication',            tier: 'dev'  },
+    { subaccountId: 'sub-001', name: 's4-erp',     authentication: 'BasicAuthentication',         url: 'https://s4.acme.local',           proxyType: 'OnPremise', tier: 'prod' },
+    { subaccountId: 'sub-001', name: 'sf-success', authentication: 'OAuth2ClientCredentials',     url: 'https://api.successfactors.com',  proxyType: 'Internet',  tier: 'prod' },
+    { subaccountId: 'sub-001', name: 'leaked-old', authentication: 'NoAuthentication',            url: 'http://insecure.example.com',     proxyType: 'Internet',  tier: 'prod' },
+    { subaccountId: 'sub-002', name: 's4-qa',      authentication: 'BasicAuthentication',         url: 'https://s4-qa.acme.local',        proxyType: 'OnPremise', tier: 'qa'   },
+    { subaccountId: 'sub-003', name: 'mock-svc',   authentication: 'NoAuthentication',            url: 'https://mock.acme.dev',           proxyType: 'Internet',  tier: 'dev'  },
   ];
 }

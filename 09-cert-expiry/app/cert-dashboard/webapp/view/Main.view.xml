@@ -33,7 +33,7 @@
         text="{= ${cert>/summary/dataSource} === 'live' ? 'Live data' : ${cert>/summary/dataSource} === 'mixed' ? 'Mixed (partial creds)' : 'Mock data' }"
         state="{= ${cert>/summary/dataSource} === 'live' ? 'Success' : ${cert>/summary/dataSource} === 'mixed' ? 'Warning' : 'Error' }"
         icon="{= ${cert>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
-        tooltip="Live when at least 2 of {DESTINATION_KEYS, IAS_*, XSUAA_KEYS} are set; mixed if 1; mock if none. Today only DESTINATION_KEYS is fully wired — IAS_SAML and XSUAA_TRUST are TODO." />
+        tooltip="Live when 2+ of {DESTINATION_KEYS, IAS_*, XSUAA_KEYS (or SUBACCOUNT_KEYS w/ xsuaa block), CTMS_*} are set; mixed if 1; mock if none." />
       <Label text="Synced:" />
       <Text text="{path: 'cert>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
