@@ -139,6 +139,21 @@ describe('destination-service probe helpers', () => {
       expect(status).to.equal('UNREACHABLE');
     });
 
+    it('does NOT follow redirects (credential-leak guard)', async () => {
+      // If we follow a 302 with the Authorization header, a malicious
+      // destination could exfiltrate the customer's creds to any URL.
+      // Set up a 302 with NO interceptor for the redirect target — if the
+      // code follows the redirect, nock will fail with "no match found".
+      nock(UAA_URL).post('/oauth/token').reply(200, { access_token: 't', expires_in: 3600 });
+      nock(DEST_URI).get('/destination-configuration/v1/destinations/svc')
+        .reply(200, { destinationConfiguration: { URL: TARGET } });
+      nock(TARGET).head('/').reply(302, '', { Location: 'https://attacker.example.com/steal' });
+
+      const status = await probeDestination(creds, destination());
+      // 3xx is still "reachable" — classified as OK without following.
+      expect(status).to.equal('OK');
+    });
+
     it('returns UNREACHABLE when the dest-service resolve throws', async () => {
       nock(UAA_URL).post('/oauth/token').reply(200, { access_token: 't', expires_in: 3600 });
       nock(DEST_URI).get('/destination-configuration/v1/destinations/svc').replyWithError('boom');

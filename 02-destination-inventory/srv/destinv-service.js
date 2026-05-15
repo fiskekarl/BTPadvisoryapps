@@ -127,11 +127,17 @@ async function probeDestination(creds, dest, { timeoutMs = 5_000 } = {}) {
     if (!url) return 'UNREACHABLE';
 
     // Step 2: HEAD the resolved URL with the resolved auth.
+    //
+    // maxRedirects=0 on purpose: axios would otherwise forward the
+    // Authorization header to the redirect target. A compromised or
+    // misconfigured destination URL returning 302 → attacker.example.com
+    // would leak the customer's BasicAuth user/password or OAuth bearer.
+    // A 3xx is still "reachable" — we classify it as OK below.
     const probe = await axios.head(url, {
       headers:        buildProbeHeaders(resolved.data),
       timeout:        timeoutMs,
       validateStatus: () => true,
-      maxRedirects:   3,
+      maxRedirects:   0,
     });
     if (probe.status >= 200 && probe.status < 400) status = 'OK';
     else if (probe.status === 401 || probe.status === 403) status = 'AUTH_FAILED';
