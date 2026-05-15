@@ -48,6 +48,9 @@ The day-1 demo every engagement opens with — *"show me my real estate."*
 - Live inventory of every subaccount via CIS Accounts API
 - Activity timestamps from Audit Log Retrieval — flags 90+ day inactive
 - Drift detection: labels, service instances, role-collections vs tier baseline
+- `activeUserCount` per subaccount via XSUAA enumeration (replaces the earlier deferred `0`)
+- `importBaseline` / `exportBaseline` actions consume + emit the shared baseline-pack format ([`baselines/`](baselines/))
+- Live/mock data-source badge + last-synced timestamp surfaced on the toolbar (cross-app standard)
 - **Deployment: 1.5 hr per client**
 
 ---
@@ -60,7 +63,10 @@ Every destination across every subaccount with risk scoring — basic auth, expi
 
 - Walks every subaccount's destination service via `SUBACCOUNT_KEYS`
 - Parses x509 certificate content for expiry dates
-- Findings: BasicAuth-in-prod, certs <14d, certs <60d
+- Live reachability probe per destination — taxonomy: `OK` / `AUTH_FAILED` / `UNREACHABLE` / `TIMEOUT` / `NOT_PROBED` (bounded 5-lane parallel, 60s cache; OnPremise/ClientCert skipped to avoid noise)
+- Probe is redirect-safe: `maxRedirects=0` so the resolved auth header never forwards to a 3xx target
+- Findings: `BASIC_AUTH_IN_PROD`, `CERT_EXPIRING` (<14d / <60d), `DANGLING_TARGET` (probe = UNREACHABLE), `MTLS_AVAILABLE_NOT_USED` (curated mTLS-capable host catalog)
+- ANS notifications fire on critical findings (severity = `error`); 12h dedup prevents refresh-spam
 - Acknowledgement workflow with snooze-until — preserves audit trail
 - **Deployment: 1 hr per client**
 
@@ -72,10 +78,12 @@ Your codified governance opinion, running on the customer's real data, exporting
 
 ![Compliance Scorecard](_pitch-deck/screenshots/app03-scorecard.png)
 
-- Rule engine with 4 evaluators + 6 baseline rules out of the box
+- Rule engine with **14 evaluators** and **20 canonical rules** out of the box (governance / identity / network / cost / hygiene), aligned to CIS BTP Benchmark themes — cited in each rule's description
 - Per-subaccount A/B/C/D/F grading; overall global-account score
 - `ScoreAdmin` can edit rules in the workshop — tuned ruleset stays with the customer
 - Snapshot persistence enables "before vs after" deliverable at every QBR
+- `importBaseline(packJson)` / `exportBaseline()` actions for sharing tuned rule sets across engagements via the [`baselines/`](baselines/) directory
+- ANS notification on `D`/`F` grade regression (severity-mapped to FATAL/ERROR)
 - **Deployment: 30 min per client** (composes data from #1 + #2)
 
 ---
@@ -105,7 +113,8 @@ The silent failures in IAS↔XSUAA federation — surfaced before they become an
 - Walks every subaccount's XSUAA Authorization API for RC enumeration + per-RC user lists
 - Email-keyed cross-tabulation aggregates "the same human" across tenants
 - 3 baseline toxic-combo policies: prod-dev admin, prod-dev deployer, admin-and-auditor
-- Per-user assignment drill-down dialog; admin can author new policies in-app
+- Per-user assignment drill-down: opens a sortable dialog showing all 5 `RcAssignment` fields (tier / subaccount / RC / description) — tier-ordered prod-first
+- Admin can author new policies in-app
 - **Deployment: 1.5 hr per client**
 
 ---
@@ -133,6 +142,7 @@ Hard ROI for the renewal conversation. Gives procurement a number; gives you the
 - "Approaching renewal" highlighting; downgrade recommendations with €/yr saving
 - `KEEP`/`DOWNGRADE`/`INVESTIGATE` classification per service+plan
 - Operator-seeded `ContractAnchor` table provides unit prices for €-saving calc
+- Per-row **trend sparkline** rendered from the `history: UsagePoint[]` payload (LineMicroChart, colour-banded by utilization)
 - **Deployment: 1 hr + 3 hr to seed `ContractAnchors` for the top-10 services**
 
 ---
@@ -146,7 +156,7 @@ Hard ROI for the renewal conversation. Gives procurement a number; gives you the
 ![AI Governance](_pitch-deck/screenshots/app08-aigovernance.png)
 
 - Generative AI Hub orchestration prompts deployed where, by whom
-- Model spend by subaccount/team/cost-center
+- Per-model EUR spend ESTIMATED from real AI Core `/v2/lm/metrics` token counts × a maintained `MODEL_RATE_CARD` of SAP-published list prices (the spend KPI is no longer a fixed mock)
 - Content-filter & data-masking config per scenario with compliance scoring
 - Prompt-injection alerts; prohibited-data egress detection
 - **Deployment: 1 hr per client**
@@ -159,10 +169,12 @@ Every certificate across the BTP landscape with rotation owner, blast radius, an
 
 ![Cert Expiry Console](_pitch-deck/screenshots/app09-certs.png)
 
-- Aggregates from destinations, IAS SAML/OIDC, XSUAA trust configs, cTMS keys
+- Aggregates from **destinations** (live), **IAS SAML/OIDC trust configs** (live via `/Trust`), **XSUAA trust configs** (live via `/sap/rest/authorization/v2/trust-configurations`, accepts `XSUAA_KEYS` or `SUBACCOUNT_KEYS.xsuaa`), and **cTMS signing identities** (live via `/v2/landscapeIdentities`)
+- Defensive cert-candidate extraction handles 6 known field locations + 3 envelope shapes so SAML, OIDC, and cTMS-specific responses all contribute
 - Severity ladder: notice (90d) → warn (30d) → critical (14d) → expired
 - Per-engagement rotation-owner registry maps cert patterns to named humans
 - Acknowledge-until workflow suppresses noise during planned rotation windows
+- ANS notification on `error` / `expired` severity certs (12h dedup); blast-radius and rotation-owner embedded in the alert body
 - **Deployment: 30 min per client** (reuses #2 + #4 keys)
 
 ---
@@ -176,6 +188,7 @@ Moves the CFO from *"show me costs"* to *"approved, here's the chargeback policy
 - Hierarchical cost tree: BU → Product → Cost Center → Subaccount
 - Per-cost-center invoices generated from CIS labels
 - Configurable shared-service allocation (XSUAA, audit log, IAS) with split rules: `direct`, `even`, `weighted`
+- Invoice → `LeafCost` drill-down dialog: click any invoice row to see service-level attribution (service, plan, subaccount, cost), sorted by cost descending
 - Goes beyond per-subaccount cost views — full chargeback semantics
 - **Deployment: 1 hr + 3 hr to import org hierarchy**
 
@@ -223,7 +236,8 @@ Every app follows the same shape:
 ├─────────────────────────────────────────────────────────────┤
 │  srv/lib/ (shared, duplicated across apps)                  │
 │  oauth-cache · cis-client · subaccount-clients              │
-│  + uas-client (apps #7/#10) + aicore-client (app #8)        │
+│  + notification (ANS, all 11) + uas-client (#7/#10)         │
+│  + aicore-client (#8)                                       │
 ├─────────────────────────────────────────────────────────────┤
 │  Customer BTP APIs                                          │
 │  CIS · UAS · Audit Log · Destination · XSUAA Authz · IAS    │
@@ -232,8 +246,42 @@ Every app follows the same shape:
 
 - **Leave-behind, not consultant-hosted.** Apps deploy to the *client's* subaccount. They keep it after the engagement.
 - **Mock mode out of the box.** Every app boots with rich demo data when env vars aren't set.
+- **Data-source provenance on every dashboard.** A coloured badge + "Synced: <time>" label distinguishes `live` / `mixed` / `mock` runs at a glance — admin trust survives the moment they realise some panels are demo data.
 - **Per-clientid OAuth token cache.** Same proven pattern across all apps.
 - **XSUAA scope split: `{App}Viewer` / `{App}Admin`.** Read access for workshop attendees; tuning rights for the lead architect.
+
+### Cross-cutting: Alert Notification Service (ANS)
+
+Shared `srv/lib/notification.js` — duplicated across every app per the existing `srv/lib/` convention. It's an ANS producer:
+
+```text
+POST {ANS_URL}/cf/producer/v1/resource-events
+```
+
+OAuth2 client-credentials via `ANS_OAUTH_URL` + `ANS_CLIENT_ID` + `ANS_CLIENT_SECRET`. Routing to Slack / Teams / email / webhook is configured on the ANS side (subscription rules matching `eventType` / `severity` / `tags`), so the producer only emits events.
+
+In-process dedup keyed by `(eventType, severity, resource)` with a 12-hour TTL prevents alert-spam on dashboard refresh. **No-op when env vars are unset** — every app is safe to call unconditionally; demo mode stays clean.
+
+Apps with live producers wired up today: **#02** (critical destination findings), **#03** (`D`/`F` overall grade regression), **#09** (`error`/`expired` cert severity). Other apps carry the lib for the next sprint.
+
+### Cross-cutting: Baseline packs
+
+[`baselines/btp-best-practice-2026.05.json`](baselines/) — single JSON file bundling the canonical drift-baselines for app #1 + the 20 canonical compliance rules for app #3, all in one place. Maps to CIS BTP Benchmark themes, cited inline in each rule's description.
+
+```jsonc
+{
+  "version": "2026.05",
+  "01-subaccount-lifecycle": { "driftBaselines": [ ... ] },
+  "03-compliance-scorecard": { "rules":          [ ... ] }
+}
+```
+
+Two new endpoints per affected app:
+
+- `action importBaseline(packJson: LargeString)` — upserts the relevant section. `{App}Admin` scope.
+- `function exportBaseline() returns LargeString` — dumps current state in the same pack shape so engagement-specific tweaks can be checked back in and shipped to the next customer.
+
+See [`baselines/README.md`](baselines/README.md) for the apply-at-deploy workflow (jq + curl).
 
 ### `SUBACCOUNT_KEYS` env var (cross-app standard)
 
@@ -325,18 +373,18 @@ Every app has a test suite gated by GitHub Actions CI ([`.github/workflows/test.
 
 | App | Tests | Coverage focus |
 |---|---:|---|
-| `01-subaccount-lifecycle`     |  32 | pure helpers (`inferTier`, `fingerprint`, `isoDaysAgo`), oauth-cache, cis-client, drift integration |
-| `02-destination-inventory`    |  13 | `daysUntil`, `parseCertNotAfter`, `getDestinationKeys`, basic-auth-in-prod findings |
-| `03-compliance-scorecard`     |  36 | all rule evaluators, `buildScorecard`, `gradeFor`, `runScan` persistence |
-| `04-identity-federation`      |  27 | `pemNotAfter`, `daysUntil`, `hasIasCredentials`, cis-client, integration |
-| `05-role-collection-map`      |  29 | `inferTier`, `loadAssignments` (sinon-stubbed), toxic-finding integration |
-| `06-audit-log`                |  19 | `inWindow` time-band logic, anomaly rules, integration |
-| `07-entitlement-optimization` |  37 | UAS client, `ymOffset`, multi-month fetch race, integration |
-| `08-ai-governance`            |  18 | `inferProvider`, AI Core client, integration |
-| `09-cert-expiry`              |  18 | `severityFor`, `lookupOwner`, sorted integration result |
-| `10-cost-allocation`          |  39 | UAS client, cost split, `currentYM`, integration |
-| `11-clean-core`               |   9 | `classify` heuristics, scan-run persistence |
-| **Total**                     | **277** | |
+| `01-subaccount-lifecycle`     |  49 | pure helpers, oauth-cache, cis-client, `uniqueUserCount` (sinon), notification lib, baseline import/export integration |
+| `02-destination-inventory`    |  51 | `daysUntil`, `parseCertNotAfter`, probe gate / headers / classifier, full reachability probe + bounded `probeAll` via nock, redirect-leak guard, `isMtlsCapableUrl`, dangling-target + mTLS findings, notification lib |
+| `03-compliance-scorecard`     |  68 | all 14 rule evaluators (pass + fail cases), `buildScorecard`, `gradeFor`, `runScan` persistence, baseline import/export round-trip, notification lib |
+| `04-identity-federation`      |  37 | `pemNotAfter`, `daysUntil`, `hasIasCredentials`, cis-client, integration, notification lib |
+| `05-role-collection-map`      |  39 | `inferTier`, `loadAssignments` (sinon-stubbed), toxic-finding integration, notification lib |
+| `06-audit-log`                |  29 | `inWindow` time-band logic, anomaly rules, integration, notification lib |
+| `07-entitlement-optimization` |  47 | UAS client, `ymOffset`, multi-month fetch race, integration, notification lib |
+| `08-ai-governance`            |  45 | `inferProvider`, AI Core client, `fetchMetrics` + `extractTokens` + `aggregateMetricsToSpend` + rate-card cost math, notification lib |
+| `09-cert-expiry`              |  56 | `severityFor`, `lookupOwner`, cert-candidate extraction across 9 field shapes, IAS `/Trust`, XSUAA trust-configurations, cTMS `/v2/landscapeIdentities` scans (all via nock), notification lib |
+| `10-cost-allocation`          |  49 | UAS client, cost split, `currentYM`, integration, notification lib |
+| `11-clean-core`               |  19 | `classify` heuristics, scan-run persistence, notification lib |
+| **Total**                     | **489** | |
 
 ### Toolchain (uniform across all 11 apps)
 
