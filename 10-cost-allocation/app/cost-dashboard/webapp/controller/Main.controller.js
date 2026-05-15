@@ -1,8 +1,16 @@
 sap.ui.define([
   'sap/ui/core/mvc/Controller',
   'sap/m/MessageToast',
+  'sap/m/Dialog',
+  'sap/m/Button',
+  'sap/m/Table',
+  'sap/m/Column',
+  'sap/m/ColumnListItem',
+  'sap/m/Text',
+  'sap/m/ObjectNumber',
+  'sap/m/ObjectStatus',
   'sap/ui/export/Spreadsheet'
-], function (Controller, MessageToast, Spreadsheet) {
+], function (Controller, MessageToast, Dialog, Button, Table, Column, ColumnListItem, Text, ObjectNumber, ObjectStatus, Spreadsheet) {
   'use strict';
 
   return Controller.extend('com.btpconsulting.costallocation.controller.Main', {
@@ -41,6 +49,43 @@ sap.ui.define([
       if (!iso) return '—';
       try { return new Date(iso).toLocaleString(); }
       catch (e) { return iso; }
+    },
+
+    onInvoicePress: function (oEvent) {
+      const inv = oEvent.getSource().getBindingContext('cost').getObject();
+      const lines = (inv.lineItems || []).slice()
+        .sort((a, b) => Number(b.cost) - Number(a.cost));
+
+      const dialog = new Dialog({
+        title:         `${inv.costCenter} — ${lines.length} services (${inv.yearMonth})`,
+        contentWidth:  '60rem',
+        contentHeight: '32rem',
+        resizable:     true,
+        content: new Table({
+          columns: [
+            new Column({ header: new Text({ text: 'Service' }) }),
+            new Column({ header: new Text({ text: 'Plan' }) }),
+            new Column({ header: new Text({ text: 'Subaccount' }) }),
+            new Column({ header: new Text({ text: 'Cost' }), hAlign: 'End' }),
+            new Column({ header: new Text({ text: 'Type' }), width: '5rem' }),
+          ],
+          items: lines.map((l) =>
+            new ColumnListItem({ cells: [
+              new Text({ text: l.serviceName }),
+              new Text({ text: l.planName || '' }),
+              new Text({ text: l.subaccountName || l.subaccountId }),
+              new ObjectNumber({ number: l.cost, unit: l.currency, emphasized: true }),
+              new ObjectStatus({
+                text:  l.shared ? 'shared' : 'direct',
+                state: l.shared ? 'Warning' : 'Information',
+              }),
+            ]})
+          ),
+        }),
+        endButton: new Button({ text: 'Close', press: () => dialog.close() }),
+        afterClose: () => dialog.destroy(),
+      });
+      dialog.open();
     },
 
     onExport: function () {

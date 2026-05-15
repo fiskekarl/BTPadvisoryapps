@@ -3,7 +3,8 @@
   xmlns="sap.m"
   xmlns:mvc="sap.ui.core.mvc"
   xmlns:l="sap.ui.layout"
-  xmlns:core="sap.ui.core">
+  xmlns:core="sap.ui.core"
+  xmlns:microchart="sap.suite.ui.microchart">
 
   <Page id="mainPage" title="{i18n>appTitle}" showNavButton="false">
 
@@ -49,6 +50,7 @@
               <Column><Text text="{i18n>colAvg}" /></Column>
               <Column><Text text="{i18n>colPeak}" /></Column>
               <Column><Text text="{i18n>colUtilization}" /></Column>
+              <Column><Text text="Trend" width="9rem" /></Column>
               <Column><Text text="{i18n>colRecommendation}" /></Column>
               <Column><Text text="{i18n>colSuggested}" /></Column>
               <Column><Text text="{i18n>colSaving}" /></Column>
@@ -64,6 +66,15 @@
                   <Text text="{entitle>peakUsage}" />
                   <ObjectNumber number="{entitle>utilizationPct}" unit="%"
                                 state="{= ${entitle>utilizationPct} == 0 ? 'None' : ${entitle>utilizationPct} &lt; 35 ? 'Warning' : ${entitle>utilizationPct} &gt; 85 ? 'Error' : 'Success' }" />
+                  <microchart:LineMicroChart size="XS"
+                                             tooltip="{= 'Usage trend over the selected window. ' + ${entitle>sparkline}.length + ' data points.' }">
+                    <microchart:lines>
+                      <microchart:LineMicroChartLine points="{entitle>sparkline}"
+                                                     color="{= ${entitle>utilizationPct} &gt; 85 ? 'Error' : ${entitle>utilizationPct} &lt; 35 ? 'Critical' : 'Good' }">
+                        <microchart:LineMicroChartPoint x="{entitle>x}" y="{entitle>y}" />
+                      </microchart:LineMicroChartLine>
+                    </microchart:lines>
+                  </microchart:LineMicroChart>
                   <ObjectStatus text="{entitle>recommendation}"
                                 state="{= ${entitle>recommendation} === 'DOWNGRADE' ? 'Warning' : ${entitle>recommendation} === 'INVESTIGATE' ? 'Error' : 'Success' }" />
                   <Text text="{= ${entitle>suggestedQuota} || '—' }" />

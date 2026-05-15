@@ -72,22 +72,40 @@ sap.ui.define([
     onUserPress: function (oEvent) {
       const ctx = oEvent.getSource().getBindingContext('role');
       const u = ctx.getObject();
+      // Sort by (tier, subaccountName, rcName) so prod rows surface first
+      // and the same subaccount's RCs cluster together. tierOrder breaks
+      // the usual alpha sort that would put dev before prod.
+      const tierOrder = { prod: 0, qa: 1, dev: 2, unknown: 3 };
+      const rows = (u.assignments || []).slice().sort((a, b) => {
+        const ta = tierOrder[a.tier] ?? 9;
+        const tb = tierOrder[b.tier] ?? 9;
+        if (ta !== tb) return ta - tb;
+        if (a.subaccountName !== b.subaccountName) return a.subaccountName.localeCompare(b.subaccountName);
+        return a.rcName.localeCompare(b.rcName);
+      });
+
+      const tiersSpanned = [...new Set(rows.map((r) => r.tier))].join(', ') || '—';
       const dialog = new Dialog({
-        title: `${u.displayName} — ${u.email}`,
-        contentWidth: '40rem',
-        contentHeight: '24rem',
+        title: `${u.displayName || u.email} — ${rows.length} assignments across ${tiersSpanned}`,
+        contentWidth:  '52rem',
+        contentHeight: '28rem',
         resizable: true,
         content: new Table({
           columns: [
+            new Column({ header: new Text({ text: 'Tier' }), width: '4rem' }),
             new Column({ header: new Text({ text: 'Subaccount' }) }),
-            new Column({ header: new Text({ text: 'Tier' }) }),
             new Column({ header: new Text({ text: 'Role Collection' }) }),
+            new Column({ header: new Text({ text: 'Description' }) }),
           ],
-          items: u.assignments.map((a) =>
+          items: rows.map((a) =>
             new ColumnListItem({ cells: [
+              new ObjectStatus({
+                text: a.tier,
+                state: a.tier === 'prod' ? 'Error' : a.tier === 'qa' ? 'Warning' : 'Information',
+              }),
               new Text({ text: a.subaccountName }),
-              new Text({ text: a.tier }),
               new Text({ text: a.rcName }),
+              new Text({ text: a.rcDescription || '' }),
             ]})
           ),
         }),

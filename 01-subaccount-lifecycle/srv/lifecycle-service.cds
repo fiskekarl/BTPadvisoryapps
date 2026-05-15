@@ -33,7 +33,7 @@ service LifecycleService {
     usedForProd         : String(30);
     serviceInstanceCount: Integer;
     roleCollectionCount : Integer;
-    activeUserCount     : Integer;       // last 30 days
+    activeUserCount     : Integer;       // distinct users currently assigned to any RC in the subaccount
   }
 
   /** A single drift finding produced by comparing a subaccount to its tier baseline. */

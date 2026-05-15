@@ -20,7 +20,7 @@
     "rootView": { "viewName": "com.btpconsulting.entitlement.view.App", "type": "XML", "async": true, "id": "app" },
     "dependencies": {
       "minUI5Version": "1.120.0",
-      "libs": { "sap.m": {}, "sap.ui.core": {}, "sap.ui.layout": {}, "sap.suite.ui.commons": {}, "sap.ui.export": {} }
+      "libs": { "sap.m": {}, "sap.ui.core": {}, "sap.ui.layout": {}, "sap.suite.ui.commons": {}, "sap.suite.ui.microchart": {}, "sap.ui.export": {} }
     },
     "contentDensities": { "compact": true, "cozy": true },
     "models": {

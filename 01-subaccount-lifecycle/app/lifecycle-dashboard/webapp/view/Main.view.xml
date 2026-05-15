@@ -69,6 +69,7 @@
               <Column><Text text="{i18n>colCostCenter}" /></Column>
               <Column><Text text="{i18n>colDepartment}" /></Column>
               <Column><Text text="{i18n>colDaysInactive}" /></Column>
+              <Column><Text text="Users" width="5rem" /></Column>
               <Column><Text text="{i18n>colUsedForProd}" /></Column>
             </columns>
             <items>
@@ -84,6 +85,8 @@
                   <Text text="{lifecycle>department}" />
                   <ObjectNumber number="{lifecycle>daysInactive}"
                                 state="{= ${lifecycle>daysInactive} >= 90 ? 'Error' : ${lifecycle>daysInactive} >= 30 ? 'Warning' : 'Success' }" />
+                  <ObjectNumber number="{lifecycle>activeUserCount}"
+                                tooltip="Distinct users currently assigned to any role collection in this subaccount." />
                   <Text text="{lifecycle>usedForProd}" />
                 </cells>
               </ColumnListItem>

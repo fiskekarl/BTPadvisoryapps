@@ -1,9 +1,11 @@
 'use strict';
 
 const { expect } = require('chai');
+const sinon = require('sinon');
 const { __test__ } = require('../../srv/lifecycle-service');
+const sa = require('../../srv/lib/subaccount-clients');
 
-const { isoToday, isoDaysAgo, fingerprint, inferTier, envFor } = __test__;
+const { isoToday, isoDaysAgo, fingerprint, inferTier, envFor, uniqueUserCount } = __test__;
 
 describe('lifecycle-service pure helpers', () => {
 
@@ -86,6 +88,54 @@ describe('lifecycle-service pure helpers', () => {
 
     it('returns first env when neither CF nor Kyma', () => {
       expect(envFor(['neo'])).to.equal('neo');
+    });
+  });
+
+  describe('uniqueUserCount', () => {
+    let stub;
+    afterEach(() => { if (stub) stub.restore(); });
+
+    it('returns 0 when no RCs exist', async () => {
+      stub = sinon.stub(sa, 'getRoleCollectionUsers').resolves([]);
+      const n = await uniqueUserCount({}, []);
+      expect(n).to.equal(0);
+      expect(stub.called).to.equal(false);
+    });
+
+    it('dedups users by email across role collections', async () => {
+      stub = sinon.stub(sa, 'getRoleCollectionUsers');
+      stub.withArgs(sinon.match.any, 'Admin')
+          .resolves([{ email: 'alice@acme.com' }, { email: 'bob@acme.com' }]);
+      stub.withArgs(sinon.match.any, 'Viewer')
+          .resolves([{ email: 'ALICE@acme.com' }, { email: 'carol@acme.com' }]);
+
+      const n = await uniqueUserCount({}, [{ name: 'Admin' }, { name: 'Viewer' }]);
+      // alice (case-insensitive) counts once → {alice, bob, carol} = 3
+      expect(n).to.equal(3);
+    });
+
+    it('falls through email-less users (no userId either) without crashing', async () => {
+      stub = sinon.stub(sa, 'getRoleCollectionUsers').resolves([
+        { name: 'Anonymous' }, { email: 'bob@acme.com' },
+      ]);
+      const n = await uniqueUserCount({}, [{ name: 'Admin' }]);
+      expect(n).to.equal(1);
+    });
+
+    it('skips RCs whose user fetch throws — does not zero the whole count', async () => {
+      stub = sinon.stub(sa, 'getRoleCollectionUsers');
+      stub.withArgs(sinon.match.any, 'Admin').resolves([{ email: 'alice@acme.com' }]);
+      stub.withArgs(sinon.match.any, 'Broken').rejects(new Error('500'));
+
+      const n = await uniqueUserCount({}, [{ name: 'Admin' }, { name: 'Broken' }]);
+      expect(n).to.equal(1);
+    });
+
+    it('handles RC entries with missing name (skipped)', async () => {
+      stub = sinon.stub(sa, 'getRoleCollectionUsers').resolves([{ email: 'a@x' }]);
+      const n = await uniqueUserCount({}, [{}, { name: 'Admin' }]);
+      expect(n).to.equal(1);
+      expect(stub.callCount).to.equal(1);
     });
   });
 });

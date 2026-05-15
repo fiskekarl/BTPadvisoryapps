@@ -41,9 +41,10 @@
               <Column><Text text="{i18n>colDirect}" /></Column>
               <Column><Text text="{i18n>colShared}" /></Column>
               <Column><Text text="{i18n>colTotal}" /></Column>
+              <Column><Text text="Lines" width="4rem" /></Column>
             </columns>
             <items>
-              <ColumnListItem>
+              <ColumnListItem type="Navigation" press="onInvoicePress">
                 <cells>
                   <ObjectIdentifier title="{cost>costCenter}" />
                   <Text text="{cost>buName}" />
@@ -51,6 +52,7 @@
                   <ObjectNumber number="{cost>directCost}" unit="{cost>currency}" />
                   <ObjectNumber number="{cost>sharedCost}" unit="{cost>currency}" />
                   <ObjectNumber number="{cost>totalCost}"  unit="{cost>currency}" emphasized="true" />
+                  <Text text="{= ${cost>lineItems}.length}" />
                 </cells>
               </ColumnListItem>
             </items>
