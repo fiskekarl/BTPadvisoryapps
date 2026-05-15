@@ -19,7 +19,11 @@ async function getOAuthToken(uaa) {
       client_id:     uaa.clientid,
       client_secret: uaa.clientsecret,
     }).toString(),
-    { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    {
+      headers:      { 'Content-Type': 'application/x-www-form-urlencoded' },
+      timeout:      30_000,
+      maxRedirects: 0,
+    });
 
   cache.token     = resp.data.access_token;
   cache.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;

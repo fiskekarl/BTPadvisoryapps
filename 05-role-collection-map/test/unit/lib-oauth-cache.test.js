@@ -62,4 +62,20 @@ describe('lib/oauth-cache', () => {
     expect(t1).to.equal('first');
     expect(t2).to.equal('second');
   });
+
+  it('does NOT follow redirects on the OAuth POST (credential-leak guard)', async () => {
+    // A misconfigured / hostile UAA URL returning 30x must not cause axios
+    // to forward the POST body (which carries client_secret) to the
+    // redirect target. Set up a 302 with NO interceptor for the redirect
+    // location — if the lib follows, nock will report "no match".
+    nock('https://uaa.example.com').post('/oauth/token')
+      .reply(302, '', { Location: 'https://attacker.example.com/steal' });
+
+    let err;
+    try {
+      await getOAuthToken({ clientid: 'cid', clientsecret: 'sec', url: 'https://uaa.example.com' });
+    } catch (e) { err = e; }
+    expect(err).to.exist;                                  // axios threw on 30x with maxRedirects:0
+    expect(nock.activeMocks().length).to.equal(0);         // single hit, no follow
+  });
 });

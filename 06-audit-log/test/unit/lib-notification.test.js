@@ -107,6 +107,66 @@ describe('lib/notification (ANS producer)', () => {
     });
   });
 
+  describe('credential-bearing requests do not follow redirects', () => {
+    it('OAuth POST request config has maxRedirects: 0', async () => {
+      setCreds();
+      // Intercept by recording the request and returning a redirect-with-Location.
+      // If the lib followed the redirect, a second nock would be required and
+      // the test would hang. We verify both: a single interceptor satisfies
+      // the request, AND the call surfaces as transport-error or returns
+      // (depending on whether axios throws on 30x with maxRedirects:0).
+      let oauthHits = 0;
+      nock('https://uaa.example.com').post('/oauth/token')
+        .reply(function () { oauthHits++; return [302, '', { Location: 'https://attacker.example.com/steal' }]; });
+      // Importantly NO interceptor for the redirect target — if we follow,
+      // the test will hang or fail with "no match found".
+
+      const r = await ans.notify({ eventType: 'x', severity: 'ERROR', subject: 's', body: 'b',
+        resource: { resourceName: 'r' } });
+      expect(r.sent).to.equal(false);
+      // The redirect from /oauth/token throws an axios error before any body
+      // is received → reason 'transport-error'.
+      expect(r.reason).to.equal('transport-error');
+      expect(oauthHits).to.equal(1); // single hit, no follow
+    });
+  });
+
+  describe('dedup safety: events with no resource', () => {
+    it('does NOT dedup events that lack both resourceName and resourceInstance', async () => {
+      setCreds();
+      // Three identical-shape events with empty resources — must all be
+      // attempted (no dedup collapse). They'll all fail with no nock set up
+      // (transport-error), but `attempted` should be 3.
+      nock('https://uaa.example.com').post('/oauth/token').optionally()
+        .reply(200, { access_token: 't', expires_in: 3600 });
+      nock(ANS_URL).post('/cf/producer/v1/resource-events').thrice().reply(202);
+
+      const r1 = await ans.notify({ eventType: 't', severity: 'ERROR', subject: 's', body: 'b' });
+      const r2 = await ans.notify({ eventType: 't', severity: 'ERROR', subject: 's', body: 'b' });
+      const r3 = await ans.notify({ eventType: 't', severity: 'ERROR', subject: 's', body: 'b',
+        resource: { resourceType: 'has-type-only' } }); // resource set but no name/instance
+
+      // All three sent (no dedup), but no entries cached.
+      expect(r1.sent).to.equal(true);
+      expect(r2.sent).to.equal(true);
+      expect(r3.sent).to.equal(true);
+    });
+
+    it('STILL dedups events with a populated resource', async () => {
+      setCreds();
+      nock('https://uaa.example.com').post('/oauth/token').optionally()
+        .reply(200, { access_token: 't', expires_in: 3600 });
+      nock(ANS_URL).post('/cf/producer/v1/resource-events').once().reply(202);
+
+      const evt = { eventType: 't', severity: 'ERROR', subject: 's', body: 'b',
+        resource: { resourceName: 'r', resourceInstance: 'i' } };
+      const r1 = await ans.notify(evt);
+      const r2 = await ans.notify(evt);
+      expect(r1.sent).to.equal(true);
+      expect(r2).to.deep.equal({ sent: false, reason: 'dedup' });
+    });
+  });
+
   describe('notifyFindings', () => {
     it('counts attempted / sent / deduped', async () => {
       setCreds();

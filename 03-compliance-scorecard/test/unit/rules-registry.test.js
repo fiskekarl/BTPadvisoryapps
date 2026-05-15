@@ -1,7 +1,7 @@
 'use strict';
 
 const { expect } = require('chai');
-const { evaluators } = require('../../srv/rules/registry');
+const { evaluators, safeCompileRegex } = require('../../srv/rules/registry');
 const { subaccounts, destinations } = require('../helpers/fixtures');
 
 describe('rules/registry evaluators', () => {
@@ -317,6 +317,61 @@ describe('rules/registry evaluators', () => {
       const out = evaluators['department-required']({ scope: 'dev' }, { subaccounts, destinations });
       // sub-005 has empty department
       expect(out.find((r) => r.subaccountId === 'sub-005').passed).to.equal(false);
+    });
+  });
+
+  describe('safeCompileRegex (ReDoS hardening)', () => {
+    it('compiles benign patterns', () => {
+      expect(safeCompileRegex('^prod-')).to.be.an.instanceOf(RegExp);
+      expect(safeCompileRegex('^[a-z]+$', 'i')).to.be.an.instanceOf(RegExp);
+    });
+
+    it('returns null for non-string input', () => {
+      expect(safeCompileRegex(null)).to.equal(null);
+      expect(safeCompileRegex(undefined)).to.equal(null);
+      expect(safeCompileRegex(42)).to.equal(null);
+    });
+
+    it('rejects patterns longer than 200 chars', () => {
+      const huge = 'a'.repeat(201);
+      expect(safeCompileRegex(huge)).to.equal(null);
+    });
+
+    it('rejects classic nested-quantifier ReDoS shapes', () => {
+      expect(safeCompileRegex('(a+)+')).to.equal(null);
+      expect(safeCompileRegex('(a*)+')).to.equal(null);
+      expect(safeCompileRegex('(.+)*')).to.equal(null);
+      expect(safeCompileRegex('^(x+x+)+y$')).to.equal(null);
+    });
+
+    it('returns null for syntactically invalid regex', () => {
+      expect(safeCompileRegex('[')).to.equal(null);
+      expect(safeCompileRegex('(unclosed')).to.equal(null);
+    });
+
+    it('lets through patterns that look like nested quantifiers but are not', () => {
+      // Single quantifier inside a group, no outer quantifier — safe.
+      expect(safeCompileRegex('(a+)')).to.be.an.instanceOf(RegExp);
+      expect(safeCompileRegex('(a*)')).to.be.an.instanceOf(RegExp);
+    });
+  });
+
+  describe('name-pattern + destination-name-pattern reject unsafe regex (ReDoS guard)', () => {
+    it('name-pattern with ReDoS pattern emits skip findings rather than compiling', () => {
+      const out = evaluators['name-pattern']({ pattern: '(a+)+' }, { subaccounts, destinations });
+      expect(out.length).to.equal(subaccounts.length);
+      expect(out.every((r) => r.passed === false)).to.equal(true);
+      expect(out[0].summary).to.match(/unsafe.*invalid/);
+    });
+
+    it('destination-name-pattern with ReDoS allowPattern emits skip findings', () => {
+      const out = evaluators['destination-name-pattern'](
+        { scope: 'prod', allowPattern: '(x+x+)+' },
+        { subaccounts, destinations }
+      );
+      expect(out.length).to.be.greaterThan(0);
+      expect(out.every((r) => r.passed === false)).to.equal(true);
+      expect(out[0].summary).to.match(/unsafe.*invalid/);
     });
   });
 });

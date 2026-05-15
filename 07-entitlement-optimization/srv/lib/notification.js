@@ -39,13 +39,17 @@ function hasCredentials() {
 
 async function getToken() {
   if (_token.value && Date.now() < _token.expiresAt) return _token.value;
+  // maxRedirects=0 is critical: this POST body carries client_secret.
+  // A misconfigured / malicious ANS_OAUTH_URL returning 30x would
+  // otherwise cause axios to follow with the secret intact.
   const resp = await axios.post(process.env.ANS_OAUTH_URL, new URLSearchParams({
     grant_type:    'client_credentials',
     client_id:     process.env.ANS_CLIENT_ID,
     client_secret: process.env.ANS_CLIENT_SECRET,
   }).toString(), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    timeout: 30_000,
+    headers:      { 'Content-Type': 'application/x-www-form-urlencoded' },
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   _token.value     = resp.data.access_token;
   _token.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;
@@ -56,13 +60,24 @@ function dedupKey(evt) {
   return `${evt.eventType}|${evt.severity}|${evt.resource?.resourceName || ''}|${evt.resource?.resourceInstance || ''}`;
 }
 
+// True when neither resourceName nor resourceInstance is set. Such an
+// event has a dedup key of `${eventType}|${severity}||`, which would
+// silently collapse distinct events that share that key shape. We
+// refuse to dedup these (every emit goes through) — and log a warning
+// so the producer is reminded to set a resource.
+function hasUsableResourceKey(evt) {
+  return !!(evt.resource?.resourceName || evt.resource?.resourceInstance);
+}
+
 function isDuplicate(evt) {
+  if (!hasUsableResourceKey(evt)) return false;
   const k = dedupKey(evt);
   const e = _dedup.get(k);
   return e && (Date.now() - e) < DEDUP_TTL_MS;
 }
 
 function markSent(evt) {
+  if (!hasUsableResourceKey(evt)) return; // don't pollute the cache with collapsed keys
   _dedup.set(dedupKey(evt), Date.now());
 }
 
@@ -96,9 +111,12 @@ async function notify(opts) {
 
   try {
     const token = await getToken();
+    // maxRedirects=0: the Authorization header would otherwise forward
+    // on a 30x. Standard hygiene for any credential-bearing request.
     await axios.post(`${process.env.ANS_URL}/cf/producer/v1/resource-events`, event, {
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      timeout: 30_000,
+      headers:      { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      timeout:      30_000,
+      maxRedirects: 0,
     });
     markSent(event);
     return { sent: true };

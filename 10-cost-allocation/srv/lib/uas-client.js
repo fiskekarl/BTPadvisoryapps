@@ -17,7 +17,9 @@ async function fetchSubaccountCost(creds, yearMonth) {
   const url   = creds.target_url || creds.url;
   const d     = ymToApiDate(yearMonth);
   const resp  = await axios.get(`${url}/reports/v1/monthlySubaccountsCost?fromDate=${d}&toDate=${d}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }, timeout: 30_000,
+    headers:      { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   return resp.data?.content ?? [];
 }

@@ -15,7 +15,8 @@ async function listEntitlements(creds) {
   const url   = creds.endpoints?.entitlements_service_url || creds.url;
   const resp  = await axios.get(`${url}/entitlements/v1/globalAccountAssignments`, {
     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
-    timeout: 30_000,
+    timeout:      30_000,
+    maxRedirects: 0,
   });
   return resp.data?.entitledServices ?? [];
 }
