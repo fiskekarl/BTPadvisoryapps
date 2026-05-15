@@ -3,6 +3,10 @@ node_modules/
 npm-debug.log
 package-lock.json
 
+# Test artefacts
+coverage/
+.nyc_output/
+
 # CAP build output
 gen/
 .cdsrc-private.json
