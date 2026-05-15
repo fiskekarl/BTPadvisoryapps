@@ -1,0 +1,52 @@
+'use strict';
+
+const path = require('path');
+const { expect } = require('chai');
+
+// Force mock-mode: getSubaccounts falls back to mockSubaccounts() when CIS
+// credentials aren't available, and getAuditActivity falls back to mock data
+// when no subaccount keys are loaded.
+delete process.env.CIS_CREDENTIALS;
+delete process.env.SUBACCOUNT_KEYS;
+delete process.env.VCAP_SERVICES;
+
+const cds = require('@sap/cds/lib');
+const { GET } = cds.test(path.join(__dirname, '..', '..'));
+
+describe('LifecycleService (integration)', () => {
+
+  it('getSubaccounts() returns the mock inventory in mock-mode', async () => {
+    const { data } = await GET('/odata/v4/lifecycle/getSubaccounts()');
+    expect(data.value).to.be.an('array').with.length(6); // mockSubaccounts has 6 rows
+    const prod = data.value.find((r) => r.subaccountId === 'sub-001');
+    expect(prod.displayName).to.equal('Production');
+    expect(prod.tier).to.equal('prod');
+    expect(prod.usedForProd).to.equal('USED_FOR_PRODUCTION');
+  });
+
+  it('getSummary() returns lifecycle KPIs', async () => {
+    const { data } = await GET('/odata/v4/lifecycle/getSummary()');
+    expect(data).to.include.keys(
+      'totalSubaccounts', 'activeSubaccounts', 'inactiveSubaccounts',
+      'stoppedSubaccounts', 'driftFindings', 'criticalDrifts', 'auditEvents30d'
+    );
+    expect(data.totalSubaccounts).to.equal(6);
+    expect(data.stoppedSubaccounts).to.be.a('number');
+  });
+
+  it('getAuditActivity() returns mock events when subaccount keys are absent', async () => {
+    const { data } = await GET("/odata/v4/lifecycle/getAuditActivity(subaccountId=null,days=30)");
+    expect(data.value).to.be.an('array').with.length.greaterThan(0);
+    expect(data.value[0]).to.include.keys('timestamp', 'subaccountId', 'actor', 'action', 'outcome');
+  });
+
+  it('getAuditActivity() filters mock events by subaccountId', async () => {
+    const { data } = await GET("/odata/v4/lifecycle/getAuditActivity(subaccountId='sub-001',days=30)");
+    expect(data.value.every((e) => e.subaccountId === 'sub-001')).to.equal(true);
+  });
+
+  it('DriftBaselines entity is queryable (empty by default)', async () => {
+    const { data } = await GET('/odata/v4/lifecycle/DriftBaselines');
+    expect(data.value).to.be.an('array');
+  });
+});

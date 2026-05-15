@@ -214,6 +214,7 @@ async function seedRules() {
 }
 
 module.exports = ScoreService;
+module.exports.__test__ = { buildScorecard, gradeFor, loadAll, inferTier, round2 };
 
 // ─── Mocks (used when CIS / SUBACCOUNT_KEYS unset) ───────────────────────────
 function mockSubaccounts() {

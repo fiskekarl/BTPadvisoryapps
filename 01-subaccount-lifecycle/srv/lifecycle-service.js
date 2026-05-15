@@ -320,6 +320,7 @@ class LifecycleService extends cds.ApplicationService {
 }
 
 module.exports = LifecycleService;
+module.exports.__test__ = { isoToday, isoDaysAgo, fingerprint, inferTier, envFor, collectLastActivity, collectCounts };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockSubaccounts() {

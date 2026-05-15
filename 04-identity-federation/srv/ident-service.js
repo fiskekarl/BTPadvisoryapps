@@ -249,6 +249,7 @@ async function getPolicy() {
 }
 
 module.exports = IdentService;
+module.exports.__test__ = { pemNotAfter, daysUntil, hasIasCredentials };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockTrusts() {

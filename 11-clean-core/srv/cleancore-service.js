@@ -118,6 +118,7 @@ class CleanCoreService extends cds.ApplicationService {
 }
 
 module.exports = CleanCoreService;
+module.exports.__test__ = { classify };
 
 // ─── Mock data ────────────────────────────────────────────────────────────────
 function mockExtensions(systemId) {
