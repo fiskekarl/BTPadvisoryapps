@@ -3,6 +3,7 @@
 const cds   = require('@sap/cds');
 const axios = require('axios');
 const crypto = require('crypto');
+const ans   = require('./lib/notification');
 
 // ─── OAuth Token Cache ───────────────────────────────────────────────────────
 // Same pattern as BTPbilling: per-clientid cache.
@@ -363,6 +364,25 @@ class DestinvService extends cds.ApplicationService {
             ignoreReason:    ignoreSet.get(k) || '',
           });
         }
+      }
+
+      // Fire ANS notifications for critical, unacknowledged findings.
+      // The library is a no-op when ANS isn't configured, so this is
+      // safe to call unconditionally; de-dup window suppresses repeats.
+      const alertable = findings.filter((f) => !f.ignored && f.severity === 'error');
+      if (alertable.length && ans.hasCredentials()) {
+        ans.notifyFindings(alertable, (f) => ({
+          eventType: `destination.${f.code.toLowerCase()}`,
+          severity:  'ERROR',
+          subject:   `${f.code} — ${f.destinationName} (${f.subaccountId})`,
+          body:      f.summary,
+          resource: {
+            resourceName:     f.destinationName,
+            resourceType:     'btp.destination',
+            resourceInstance: `${f.subaccountId}/${f.destinationName}`,
+          },
+          tags: { subaccount: f.subaccountId, code: f.code, severity: f.severity },
+        })).catch((e) => LOG.warn(`ANS notify failed: ${e.message}`));
       }
 
       return findings;

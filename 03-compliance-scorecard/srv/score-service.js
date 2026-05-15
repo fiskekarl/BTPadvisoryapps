@@ -6,6 +6,7 @@ const path = require('path');
 
 const sa  = require('./lib/subaccount-clients');
 const cis = require('./lib/cis-client');
+const ans = require('./lib/notification');
 
 const { evaluators } = require('./rules/registry');
 
@@ -103,7 +104,79 @@ class ScoreService extends cds.ApplicationService {
                       : hasCis || hasKeys ? 'mixed'
                       : 'mock';
       card.lastSyncAt = new Date().toISOString();
+
+      // ANS notification when overall grade hits D or F (regressed
+      // compliance). The dedup window prevents alert-spam on every
+      // dashboard refresh; runScan() — explicit snapshot — bypasses
+      // this read path so the operator can still file evidence.
+      if (['D', 'F'].includes(card.overallGrade) && ans.hasCredentials()) {
+        ans.notify({
+          eventType: 'compliance.scorecard.regressed',
+          severity:  card.overallGrade === 'F' ? 'FATAL' : 'ERROR',
+          subject:   `Compliance score is ${card.overallGrade} (${card.overallScore}/100)`,
+          body:      `Global-account compliance regressed to ${card.overallGrade}. ${card.findings.filter((f) => !f.passed).length} findings open across ${card.subaccountCount} subaccount(s).`,
+          resource: {
+            resourceName:     'global-account-scorecard',
+            resourceType:     'btp.compliance.scorecard',
+            resourceInstance: 'overall',
+          },
+          tags: { grade: card.overallGrade, score: String(card.overallScore) },
+        }).catch((e) => LOG.warn(`ANS notify failed: ${e.message}`));
+      }
       return card;
+    });
+
+    this.on('importBaseline', async (req) => {
+      let pack; try { pack = JSON.parse(req.data.packJson || '{}'); }
+      catch (e) { req.error(400, `Invalid baseline JSON: ${e.message}`); return; }
+      const section = pack['03-compliance-scorecard']?.rules || [];
+      if (!Array.isArray(section) || section.length === 0) {
+        return `No 03-compliance-scorecard.rules section found in pack ${pack.version || '?'}`;
+      }
+      let upserted = 0;
+      for (const r of section) {
+        if (!r.id || !r.kind) continue;
+        const existing = await cds.db.run(
+          SELECT.one.from('com.btpconsulting.compliancescorecard.Rule').where({ id: r.id })
+        );
+        const data = {
+          id:          r.id,
+          title:       r.title || r.id,
+          description: r.description || '',
+          category:    r.category || 'governance',
+          severity:    r.severity || 'warn',
+          enabled:     r.enabled !== false,
+          kind:        r.kind,
+          paramsJson:  r.paramsJson || '{}',
+        };
+        if (existing) {
+          await cds.db.run(UPDATE('com.btpconsulting.compliancescorecard.Rule').set(data).where({ id: r.id }));
+        } else {
+          await cds.db.run(INSERT.into('com.btpconsulting.compliancescorecard.Rule').entries(data));
+        }
+        upserted++;
+      }
+      return `Imported ${upserted} rule(s) from pack ${pack.version || '?'}`;
+    });
+
+    this.on('exportBaseline', async () => {
+      const rules = await cds.db.run(SELECT.from('com.btpconsulting.compliancescorecard.Rule'));
+      return JSON.stringify({
+        version:     `export-${new Date().toISOString().slice(0, 10)}`,
+        name:        'Exported Rule snapshot',
+        '03-compliance-scorecard': {
+          rules: rules.map((r) => ({
+            id:          r.id,
+            title:       r.title,
+            description: r.description,
+            category:    r.category,
+            severity:    r.severity,
+            enabled:     r.enabled,
+            kind:        r.kind,
+            paramsJson:  r.paramsJson,
+          })),
+        },
+      }, null, 2);
     });
 
     this.on('runScan', async (req) => {

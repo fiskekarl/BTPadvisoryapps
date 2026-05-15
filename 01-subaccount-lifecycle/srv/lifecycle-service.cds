@@ -94,6 +94,22 @@ service LifecycleService {
    */
   function getAuditActivity(subaccountId: String, days: Integer) returns array of AuditEntry;
 
+  /**
+   * Import a baseline pack — applies the 01-subaccount-lifecycle.driftBaselines
+   * section, upserting each (tier, resourceType) row. Returns a short summary
+   * string (e.g. "Imported 5 baselines from pack 2026.05").
+   */
+  @(restrict: [{ grant: 'EXECUTE', to: 'LifecycleAdmin' }])
+  action importBaseline(packJson: LargeString) returns String;
+
+  /**
+   * Export the current DriftBaseline table as a baseline-pack-shaped JSON
+   * fragment. Returns the JSON string so an operator can save and ship it
+   * to the next engagement.
+   */
+  @(restrict: [{ grant: 'EXECUTE', to: 'LifecycleAdmin' }])
+  function exportBaseline() returns LargeString;
+
   // ─── Persisted CRUD ─────────────────────────────────────────────────────────
 
   @(restrict: [

@@ -3,6 +3,7 @@
 const cds = require('@sap/cds');
 const axios = require('axios');
 const crypto = require('crypto');
+const ans = require('./lib/notification');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function daysUntil(isoDate) {
@@ -326,7 +327,7 @@ class CertService extends cds.ApplicationService {
         ackByKey.set(a.certKey, a.reason || '');
       }
 
-      return raw.map((c) => {
+      const enriched = raw.map((c) => {
         const days = daysUntil(c.notAfter);
         const certKey = `${c.kind}::${c.subaccountId}::${c.name}`;
         return {
@@ -338,6 +339,28 @@ class CertService extends cds.ApplicationService {
           ackReason:    ackByKey.get(certKey) || '',
         };
       }).sort((a, b) => (a.daysToExpiry ?? 99999) - (b.daysToExpiry ?? 99999));
+
+      // Fire ANS notifications for unacknowledged certs in the critical
+      // band (severity = 'error' or 'expired'). The library no-ops when
+      // ANS isn't configured and de-dups within a 12-hour window so a
+      // dashboard refresh doesn't re-page on-call.
+      const alertable = enriched.filter((c) => !c.acknowledged && ['error', 'expired'].includes(c.severity));
+      if (alertable.length && ans.hasCredentials()) {
+        ans.notifyFindings(alertable, (c) => ({
+          eventType: c.severity === 'expired' ? 'cert.expiry.expired' : 'cert.expiry.critical',
+          severity:  c.severity === 'expired' ? 'FATAL' : 'ERROR',
+          subject:   `${c.kind} cert "${c.name}" — ${c.severity === 'expired' ? 'EXPIRED' : `${c.daysToExpiry}d left`}`,
+          body:      `${c.kind} cert "${c.name}" (subject: ${c.subject || '?'}) expires ${c.notAfter}. Blast radius: ${c.blastRadius || 'see dashboard'}. Rotation owner: ${c.rotationOwner || 'unassigned'}.`,
+          resource: {
+            resourceName:     c.name,
+            resourceType:     `btp.cert.${c.kind.toLowerCase()}`,
+            resourceInstance: `${c.subaccountId}/${c.name}`,
+          },
+          tags: { subaccount: c.subaccountId, kind: c.kind, severity: c.severity },
+        })).catch((e) => LOG.warn(`ANS notify failed: ${e.message}`));
+      }
+
+      return enriched;
     });
 
     this.on('getSummary', async () => {

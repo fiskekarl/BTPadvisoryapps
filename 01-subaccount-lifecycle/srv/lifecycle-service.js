@@ -327,6 +327,55 @@ class LifecycleService extends cds.ApplicationService {
       return all.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     });
 
+    // ── importBaseline ───────────────────────────────────────────────────────
+    this.on('importBaseline', async (req) => {
+      let pack; try { pack = JSON.parse(req.data.packJson || '{}'); }
+      catch (e) { req.error(400, `Invalid baseline JSON: ${e.message}`); return; }
+      const section = pack['01-subaccount-lifecycle']?.driftBaselines || [];
+      if (!Array.isArray(section) || section.length === 0) {
+        return `No 01-subaccount-lifecycle.driftBaselines section found in pack ${pack.version || '?'}`;
+      }
+      let upserted = 0;
+      for (const row of section) {
+        if (!row.tier || !row.resourceType) continue;
+        const existing = await cds.db.run(
+          SELECT.one.from('com.btpconsulting.subaccountlifecycle.DriftBaseline')
+            .where({ tier: row.tier, resourceType: row.resourceType })
+        );
+        const data = {
+          tier:         row.tier,
+          resourceType: row.resourceType,
+          expectedJson: row.expectedJson || '{}',
+          note:         row.note || '',
+        };
+        if (existing) {
+          await cds.db.run(UPDATE('com.btpconsulting.subaccountlifecycle.DriftBaseline').set(data)
+            .where({ tier: row.tier, resourceType: row.resourceType }));
+        } else {
+          await cds.db.run(INSERT.into('com.btpconsulting.subaccountlifecycle.DriftBaseline').entries(data));
+        }
+        upserted++;
+      }
+      return `Imported ${upserted} DriftBaseline row(s) from pack ${pack.version || '?'}`;
+    });
+
+    // ── exportBaseline ───────────────────────────────────────────────────────
+    this.on('exportBaseline', async () => {
+      const rows = await cds.db.run(SELECT.from('com.btpconsulting.subaccountlifecycle.DriftBaseline'));
+      return JSON.stringify({
+        version:     `export-${new Date().toISOString().slice(0, 10)}`,
+        name:        'Exported DriftBaseline snapshot',
+        '01-subaccount-lifecycle': {
+          driftBaselines: rows.map((r) => ({
+            tier:         r.tier,
+            resourceType: r.resourceType,
+            expectedJson: r.expectedJson,
+            note:         r.note || '',
+          })),
+        },
+      }, null, 2);
+    });
+
     // ── getSummary ───────────────────────────────────────────────────────────
     this.on('getSummary', async () => {
       const subs  = await this.send('getSubaccounts');
