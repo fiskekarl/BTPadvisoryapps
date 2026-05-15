@@ -42,9 +42,8 @@ jobs:
         env:
           NODE_ENV: development
 
-      - name: Coverage
-        run: npm run test:coverage -- --reporter=text-summary
-        continue-on-error: true
+      - name: Coverage (with gate)
+        run: npm run test:coverage
 
       - name: Upload coverage artifact
         if: always()
@@ -54,3 +53,83 @@ jobs:
           path: ${{ matrix.app }}/coverage/
           retention-days: 7
           if-no-files-found: ignore
+
+  coverage-comment:
+    name: Coverage summary comment
+    needs: test
+    if: github.event_name == 'pull_request' && always()
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage-artifacts
+
+      - name: Build summary
+        id: summary
+        run: |
+          python3 - <<'PY' > summary.md
+          import json, os, glob
+          rows = []
+          for d in sorted(glob.glob("coverage-artifacts/coverage-*")):
+              app = d.split("coverage-", 1)[1]
+              path = os.path.join(d, "coverage-summary.json")
+              if not os.path.exists(path):
+                  rows.append((app, None, None, None, None))
+                  continue
+              with open(path) as f:
+                  data = json.load(f)
+              t = data.get("total", {})
+              rows.append((
+                  app,
+                  t.get("lines", {}).get("pct"),
+                  t.get("branches", {}).get("pct"),
+                  t.get("functions", {}).get("pct"),
+                  t.get("statements", {}).get("pct"),
+              ))
+          def fmt(v):
+              return f"{v:.1f}%" if isinstance(v, (int, float)) else "—"
+          lines = ["## Test coverage", "", "| App | Lines | Branches | Functions | Statements |", "|---|---:|---:|---:|---:|"]
+          for app, ln, br, fn, st in rows:
+              lines.append(f"| `{app}` | {fmt(ln)} | {fmt(br)} | {fmt(fn)} | {fmt(st)} |")
+          lines.append("")
+          lines.append(f"<sub>Generated from {len(rows)} coverage artifacts. Floors live per-app in `.c8rc.json`.</sub>")
+          print("\n".join(lines))
+          PY
+          {
+            echo 'body<<EOF'
+            cat summary.md
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post or update PR comment
+        uses: actions/github-script@v7
+        env:
+          BODY: ${{ steps.summary.outputs.body }}
+        with:
+          script: |
+            const marker = '<!-- claude-coverage-summary -->';
+            const body = marker + '\n' + process.env.BODY;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
