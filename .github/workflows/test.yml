@@ -14,8 +14,16 @@ jobs:
       matrix:
         app:
           - 01-subaccount-lifecycle
+          - 02-destination-inventory
           - 03-compliance-scorecard
-          # Add more apps here once their test suites land:
+          - 04-identity-federation
+          - 05-role-collection-map
+          - 06-audit-log
+          - 07-entitlement-optimization
+          - 08-ai-governance
+          - 09-cert-expiry
+          - 10-cost-allocation
+          - 11-clean-core
           # - 02-destination-inventory
           # - 04-identity-federation
           # - 05-role-collection-map

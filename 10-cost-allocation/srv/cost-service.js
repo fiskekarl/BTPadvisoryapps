@@ -207,3 +207,5 @@ function mockCostRows(_ym) {
     { subaccountId: 'sub-001', subaccountName: 'Production',  serviceName: 'Audit Log Service',      planName: 'standard',             cost: 110,  currency: 'EUR' },
   ];
 }
+
+module.exports.__test__ = { currentYM, splitCost, round2, mockSubs, mockCostRows };

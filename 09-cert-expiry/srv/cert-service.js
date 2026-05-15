@@ -195,6 +195,7 @@ function lookupOwner(cert, registry) {
 }
 
 module.exports = CertService;
+module.exports.__test__ = { daysUntil, severityFor, parsePem, lookupOwner };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockCerts() {

@@ -183,3 +183,5 @@ function ymOffset(deltaMonths) {
   const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + deltaMonths);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+
+module.exports.__test__ = { mockEntitlements, ymOffset };

@@ -11,8 +11,26 @@
     "express": "^4",
     "passport": "^0"
   },
-  "devDependencies": { "@sap/cds-dk": "^9", "@sap/eslint-plugin-cds": "^3" },
-  "scripts": { "start": "cds-serve", "watch": "cds watch", "build": "cds build --production" },
+  "devDependencies": {
+    "@sap/cds-dk": "^9",
+    "@sap/eslint-plugin-cds": "^3",
+    "@cap-js/cds-test": "^0",
+    "mocha": "^10",
+    "chai": "^4",
+    "sinon": "^17",
+    "nock": "^13",
+    "c8": "^9"
+  },
+  "scripts": {
+    "start": "cds-serve",
+    "watch": "cds watch",
+    "build": "cds build --production",
+    "test": "mocha 'test/**/*.test.js'",
+    "test:unit": "mocha 'test/unit/**/*.test.js'",
+    "test:integration": "mocha 'test/integration/**/*.test.js'",
+    "test:coverage": "c8 mocha 'test/**/*.test.js'",
+    "test:watch": "mocha 'test/**/*.test.js' --watch"
+  },
   "cds": {
     "requires": {
       "auth": { "kind": "xsuaa" },

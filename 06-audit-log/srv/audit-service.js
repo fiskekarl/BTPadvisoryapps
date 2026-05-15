@@ -180,6 +180,7 @@ async function seedAnomalyRules() {
 }
 
 module.exports = AuditService;
+module.exports.__test__ = { isoDaysAgo, inWindow, applyAnomalyRules, enrichWithAnomalies };
 
 // ─── Mock data ───────────────────────────────────────────────────────────────
 function mockEvents(_days, subaccountFilter) {

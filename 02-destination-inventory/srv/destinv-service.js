@@ -220,6 +220,7 @@ async function getPolicy() {
 }
 
 module.exports = DestinvService;
+module.exports.__test__ = { daysUntil, parseCertNotAfter, getDestinationKeys };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockDestinations() {

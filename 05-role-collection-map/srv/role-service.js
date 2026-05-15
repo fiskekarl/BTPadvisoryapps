@@ -223,6 +223,7 @@ async function seedPolicies() {
 }
 
 module.exports = RoleService;
+module.exports.__test__ = { inferTier, loadAssignments };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockAssignments() {

@@ -141,6 +141,7 @@ function inferProvider(modelName) {
 }
 
 module.exports = AiService;
+module.exports.__test__ = { inferProvider };
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 function mockDeployments() {
