@@ -38,6 +38,8 @@ service CleanCoreService {
     inStackModCount    : Integer;
     unreleasedApiCount : Integer;
     compliancePct      : Decimal(8, 2);
+    dataSource         : String(10); // 'live' | 'mock'
+    lastSyncAt         : String(30); // ISO 8601 timestamp of this summary's compute
   }
 
   function getSummary()      returns CleanCoreSummary;

@@ -153,4 +153,170 @@ describe('rules/registry evaluators', () => {
       expect(out).to.deep.equal([]);
     });
   });
+
+  describe('usedForProduction-flag', () => {
+    it('passes when prod tier has shouldBe = USED_FOR_PRODUCTION', () => {
+      const out = evaluators['usedForProduction-flag'](
+        { scope: 'prod', shouldBe: 'USED_FOR_PRODUCTION' },
+        { subaccounts, destinations }
+      );
+      // sub-001 + sub-004 are prod, both USED_FOR_PRODUCTION → both pass
+      expect(out.every((r) => r.passed)).to.equal(true);
+    });
+
+    it('fails when dev subaccount has UNSET / NOT_USED but rule wants USED_FOR_PRODUCTION', () => {
+      const out = evaluators['usedForProduction-flag'](
+        { scope: 'dev', shouldBe: 'USED_FOR_PRODUCTION' },
+        { subaccounts, destinations }
+      );
+      // sub-003 (NOT_USED) and sub-005 (NOT_USED) — both fail
+      expect(out.length).to.be.greaterThan(0);
+      expect(out.every((r) => r.passed === false)).to.equal(true);
+    });
+  });
+
+  describe('destination-url-scheme', () => {
+    it('flags HTTP URLs when only https is allowed', () => {
+      const out = evaluators['destination-url-scheme'](
+        { scope: 'prod', allowedSchemes: ['https'] },
+        { subaccounts, destinations }
+      );
+      // leaked-old in sub-001 uses http://
+      const sub001 = out.find((r) => r.subaccountId === 'sub-001');
+      expect(sub001.passed).to.equal(false);
+      expect(JSON.parse(sub001.detailJson).offenders[0].name).to.equal('leaked-old');
+    });
+
+    it('passes when every destination uses an allowed scheme', () => {
+      const out = evaluators['destination-url-scheme'](
+        { scope: 'qa', allowedSchemes: ['https'] },
+        { subaccounts, destinations }
+      );
+      const sub002 = out.find((r) => r.subaccountId === 'sub-002');
+      expect(sub002.passed).to.equal(true);
+    });
+
+    it('skips destinations with empty URLs (cannot evaluate scheme)', () => {
+      const out = evaluators['destination-url-scheme'](
+        { scope: 'all', allowedSchemes: ['https'] },
+        { subaccounts: [{ subaccountId: 'x', displayName: 'X', tier: 'prod' }],
+          destinations: [{ subaccountId: 'x', name: 'd', authentication: 'NoAuthentication', url: '' }] }
+      );
+      expect(out[0].passed).to.equal(true);
+    });
+  });
+
+  describe('destination-proxy-type-for-local', () => {
+    it('passes when local-host destinations correctly use OnPremise proxy', () => {
+      // sub-001 has s4-erp at s4.acme.local with OnPremise → ok
+      // sub-002 has s4-qa at s4-qa.acme.local with OnPremise → ok
+      const out = evaluators['destination-proxy-type-for-local']({}, { subaccounts, destinations });
+      expect(out.find((r) => r.subaccountId === 'sub-001').passed).to.equal(true);
+      expect(out.find((r) => r.subaccountId === 'sub-002').passed).to.equal(true);
+    });
+
+    it('fails when a local-host destination is configured as Internet proxy', () => {
+      const sa = [{ subaccountId: 'x', displayName: 'X', tier: 'prod' }];
+      const ds = [{ subaccountId: 'x', name: 'broken', authentication: 'NoAuthentication',
+                    url: 'https://erp.corp.local', proxyType: 'Internet' }];
+      const out = evaluators['destination-proxy-type-for-local']({}, { subaccounts: sa, destinations: ds });
+      expect(out[0].passed).to.equal(false);
+    });
+  });
+
+  describe('destination-auth-allowlist', () => {
+    it('passes when every destination uses an allow-listed auth', () => {
+      const out = evaluators['destination-auth-allowlist'](
+        { scope: 'prod', allowed: ['BasicAuthentication', 'OAuth2ClientCredentials', 'NoAuthentication'] },
+        { subaccounts, destinations }
+      );
+      expect(out.every((r) => r.passed)).to.equal(true);
+    });
+
+    it('fails when a destination uses a non-allow-listed auth', () => {
+      const out = evaluators['destination-auth-allowlist'](
+        { scope: 'prod', allowed: ['ClientCertificateAuthentication'] },
+        { subaccounts, destinations }
+      );
+      const sub001 = out.find((r) => r.subaccountId === 'sub-001');
+      expect(sub001.passed).to.equal(false);
+    });
+  });
+
+  describe('destination-name-pattern', () => {
+    it('flags destinations matching denyPattern', () => {
+      const ds = [{ subaccountId: 'sub-001', name: 'svc-tmp-x', authentication: 'NoAuthentication', url: 'https://x' }];
+      const out = evaluators['destination-name-pattern'](
+        { scope: 'prod', denyPattern: '(^|[-_])(tmp|test)([-_]|$)', flags: 'i' },
+        { subaccounts, destinations: ds }
+      );
+      expect(out.find((r) => r.subaccountId === 'sub-001').passed).to.equal(false);
+    });
+
+    it('passes when destinations match the allowPattern', () => {
+      const ds = [{ subaccountId: 'sub-001', name: 'valid-name_42', authentication: 'NoAuthentication', url: 'https://x' }];
+      const out = evaluators['destination-name-pattern'](
+        { scope: 'prod', allowPattern: '^[a-zA-Z][a-zA-Z0-9_-]*$' },
+        { subaccounts, destinations: ds }
+      );
+      expect(out.find((r) => r.subaccountId === 'sub-001').passed).to.equal(true);
+    });
+  });
+
+  describe('subaccount-parent-required', () => {
+    it('passes for subaccounts under a Directory', () => {
+      const out = evaluators['subaccount-parent-required']({}, { subaccounts, destinations });
+      expect(out.find((r) => r.subaccountId === 'sub-001').passed).to.equal(true);
+    });
+
+    it('fails for direct children of the Global Account', () => {
+      const out = evaluators['subaccount-parent-required']({}, { subaccounts, destinations });
+      // sub-005 has parentName: 'Global Account' → should fail
+      // sub-006 has parentName: '' → should fail
+      expect(out.find((r) => r.subaccountId === 'sub-005').passed).to.equal(false);
+      expect(out.find((r) => r.subaccountId === 'sub-006').passed).to.equal(false);
+    });
+  });
+
+  describe('max-destinations-per-subaccount', () => {
+    it('passes when destination count is under the limit', () => {
+      const out = evaluators['max-destinations-per-subaccount']({ max: 100 }, { subaccounts, destinations });
+      expect(out.every((r) => r.passed)).to.equal(true);
+    });
+
+    it('fails subaccounts that exceed max', () => {
+      const ds = Array.from({ length: 10 }, (_, i) => ({
+        subaccountId: 'sub-001', name: `d${i}`, authentication: 'NoAuthentication', url: 'https://x',
+      }));
+      const out = evaluators['max-destinations-per-subaccount']({ max: 5 }, { subaccounts, destinations: ds });
+      expect(out.find((r) => r.subaccountId === 'sub-001').passed).to.equal(false);
+    });
+  });
+
+  describe('tier-label-consistency', () => {
+    it('passes when tier is known', () => {
+      const out = evaluators['tier-label-consistency']({}, { subaccounts, destinations });
+      expect(out.find((r) => r.subaccountId === 'sub-001').passed).to.equal(true);
+    });
+
+    it('fails when tier is "unknown"', () => {
+      const out = evaluators['tier-label-consistency']({}, { subaccounts, destinations });
+      // sub-006 has tier: 'unknown' → fails
+      expect(out.find((r) => r.subaccountId === 'sub-006').passed).to.equal(false);
+    });
+  });
+
+  describe('department-required', () => {
+    it('passes when department is set', () => {
+      const out = evaluators['department-required']({ scope: 'prod' }, { subaccounts, destinations });
+      // sub-001 + sub-004 both have department
+      expect(out.every((r) => r.passed)).to.equal(true);
+    });
+
+    it('fails when department is empty', () => {
+      const out = evaluators['department-required']({ scope: 'dev' }, { subaccounts, destinations });
+      // sub-005 has empty department
+      expect(out.find((r) => r.subaccountId === 'sub-005').passed).to.equal(false);
+    });
+  });
 });

@@ -39,6 +39,12 @@ sap.ui.define([
     onWindowChange: function () { this._loadAll(); },
     onRefresh:      function () { this._loadAll(); },
 
+    formatSyncTime: function (iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); }
+      catch (e) { return iso; }
+    },
+
     onExport: function () {
       const rows = this._model().getProperty('/events') || [];
       if (!rows.length) return MessageToast.show('Nothing to export');

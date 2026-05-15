@@ -11,7 +11,7 @@ delete process.env.SUBACCOUNT_KEYS;
 delete process.env.VCAP_SERVICES;
 
 const cds = require('@sap/cds/lib');
-const { GET } = cds.test(path.join(__dirname, '..', '..'));
+const { GET, POST } = cds.test(path.join(__dirname, '..', '..'));
 
 describe('LifecycleService (integration)', () => {
 
@@ -34,6 +34,12 @@ describe('LifecycleService (integration)', () => {
     expect(data.stoppedSubaccounts).to.be.a('number');
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/lifecycle/getSummary()');
+    expect(data.dataSource).to.equal('mock'); // no creds in test env
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('getAuditActivity() returns mock events when subaccount keys are absent', async () => {
     const { data } = await GET("/odata/v4/lifecycle/getAuditActivity(subaccountId=null,days=30)");
     expect(data.value).to.be.an('array').with.length.greaterThan(0);
@@ -48,5 +54,31 @@ describe('LifecycleService (integration)', () => {
   it('DriftBaselines entity is queryable (empty by default)', async () => {
     const { data } = await GET('/odata/v4/lifecycle/DriftBaselines');
     expect(data.value).to.be.an('array');
+  });
+
+  it('importBaseline() upserts DriftBaselines from a pack payload', async () => {
+    const pack = {
+      version: 'test-2026.05',
+      '01-subaccount-lifecycle': {
+        driftBaselines: [
+          { tier: 'prod', resourceType: 'label', expectedJson: '{"requiredLabels":["costCenter"]}', note: 'Test' },
+          { tier: 'qa',   resourceType: 'label', expectedJson: '{"requiredLabels":["department"]}', note: 'Test QA' },
+        ],
+      },
+    };
+    const { data } = await POST('/odata/v4/lifecycle/importBaseline', { packJson: JSON.stringify(pack) });
+    const msg = typeof data === 'string' ? data : data.value;
+    expect(msg).to.match(/Imported 2 DriftBaseline.*test-2026\.05/);
+
+    const after = await GET('/odata/v4/lifecycle/DriftBaselines');
+    expect(after.data.value.length).to.be.at.least(2);
+  });
+
+  it('exportBaseline() returns a JSON pack containing the driftBaselines section', async () => {
+    const { data } = await GET('/odata/v4/lifecycle/exportBaseline()');
+    const raw = typeof data === 'string' ? data : data.value;
+    const parsed = JSON.parse(raw);
+    expect(parsed['01-subaccount-lifecycle'].driftBaselines).to.be.an('array');
+    expect(parsed.version).to.match(/^export-\d{4}-\d{2}-\d{2}$/);
   });
 });

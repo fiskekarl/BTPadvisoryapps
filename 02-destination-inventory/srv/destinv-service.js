@@ -3,6 +3,7 @@
 const cds   = require('@sap/cds');
 const axios = require('axios');
 const crypto = require('crypto');
+const ans   = require('./lib/notification');
 
 // ─── OAuth Token Cache ───────────────────────────────────────────────────────
 // Same pattern as BTPbilling: per-clientid cache.
@@ -53,6 +54,143 @@ async function destApiGet(creds, path) {
   return resp.data;
 }
 
+// ─── Reachability probe ─────────────────────────────────────────────────────
+//
+// "Live reachability" for a destination means two things:
+//   1. The destination service can RESOLVE the destination (auth flow OK,
+//      target URL produced).
+//   2. The target URL itself responds to a HEAD/GET within the timeout.
+//
+// We probe (1) for every destination — that catches expired OAuth client
+// secrets, broken IdP federations, and similar cred-side rot. We probe (2)
+// only for safe combinations (HTTP + Internet + auth we can replay from a
+// HEAD), because:
+//   - OnPremise destinations require the Cloud Connector path; reaching
+//     them from this BTP service would always fail and produce noise.
+//   - ClientCertificateAuthentication would require us to load the
+//     keystore client-side, which destination service abstracts away.
+//   - RFC / LDAP / MAIL types use protocols we don't speak from CAP.
+// All non-probable combinations report 'NOT_PROBED' so the UI tells the
+// truth instead of showing a misleading 'UNKNOWN'.
+//
+// Status values: OK | UNREACHABLE | AUTH_FAILED | TIMEOUT | NOT_PROBED
+//
+// Results are cached in-memory keyed by (subaccountId::destName) with a
+// 60-second TTL so a noisy refresh button doesn't fan out probes.
+
+const _probeCache = new Map();
+const PROBE_TTL_MS = 60_000;
+
+function shouldProbeUrl(d) {
+  if (d.type !== 'HTTP') return false;
+  if (d.proxyType !== 'Internet') return false;
+  return ['NoAuthentication', 'BasicAuthentication', 'OAuth2ClientCredentials'].includes(d.authentication);
+}
+
+function buildProbeHeaders(resolved) {
+  const h = {};
+  const tokens = resolved?.authTokens || [];
+  if (tokens.length > 0 && tokens[0].value) {
+    h.Authorization = `${tokens[0].type || 'Bearer'} ${tokens[0].value}`;
+    return h;
+  }
+  const cfg = resolved?.destinationConfiguration || {};
+  if (cfg.User && cfg.Password) {
+    h.Authorization = 'Basic ' + Buffer.from(`${cfg.User}:${cfg.Password}`).toString('base64');
+  }
+  return h;
+}
+
+function classifyProbeError(err) {
+  if (err?.code === 'ECONNABORTED' || /timeout/i.test(err?.message || '')) return 'TIMEOUT';
+  if (err?.response?.status === 401 || err?.response?.status === 403)     return 'AUTH_FAILED';
+  return 'UNREACHABLE';
+}
+
+async function probeDestination(creds, dest, { timeoutMs = 5_000 } = {}) {
+  if (!shouldProbeUrl(dest)) return 'NOT_PROBED';
+
+  const cacheKey = `${creds.subaccountId}::${dest.name}`;
+  const cached = _probeCache.get(cacheKey);
+  if (cached && Date.now() - cached.t < PROBE_TTL_MS) return cached.v;
+
+  let status;
+  try {
+    // Step 1: resolve via destination service. If this fails the destination
+    // itself is broken (creds rot, missing fields, IdP gone) and we report
+    // AUTH_FAILED / UNREACHABLE without ever touching the target URL.
+    const token = await getOAuthToken(creds.uaa);
+    const resolved = await axios.get(
+      `${creds.uri}/destination-configuration/v1/destinations/${encodeURIComponent(dest.name)}`,
+      { headers: { Authorization: `Bearer ${token}` }, timeout: timeoutMs }
+    );
+    const url = resolved.data?.destinationConfiguration?.URL || dest.url;
+    if (!url) return 'UNREACHABLE';
+
+    // Step 2: HEAD the resolved URL with the resolved auth.
+    //
+    // maxRedirects=0 on purpose: axios would otherwise forward the
+    // Authorization header to the redirect target. A compromised or
+    // misconfigured destination URL returning 302 → attacker.example.com
+    // would leak the customer's BasicAuth user/password or OAuth bearer.
+    // A 3xx is still "reachable" — we classify it as OK below.
+    const probe = await axios.head(url, {
+      headers:        buildProbeHeaders(resolved.data),
+      timeout:        timeoutMs,
+      validateStatus: () => true,
+      maxRedirects:   0,
+    });
+    if (probe.status >= 200 && probe.status < 400) status = 'OK';
+    else if (probe.status === 401 || probe.status === 403) status = 'AUTH_FAILED';
+    else status = 'UNREACHABLE';
+  } catch (e) {
+    status = classifyProbeError(e);
+  }
+
+  _probeCache.set(cacheKey, { t: Date.now(), v: status });
+  return status;
+}
+
+async function probeAll(creds, dests, { concurrency = 5 } = {}) {
+  // Bounded parallelism: each "lane" pulls work off a shared queue. Keeps
+  // total wall-clock down on a 50-destination subaccount without melting
+  // the target systems with simultaneous probes.
+  const queue = [...dests];
+  const results = new Map();
+  const worker = async () => {
+    while (queue.length) {
+      const d = queue.shift();
+      results.set(d.name, await probeDestination(creds, d));
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(concurrency, dests.length) }, worker));
+  return results;
+}
+
+// ─── mTLS catalog ────────────────────────────────────────────────────────────
+//
+// Per the API Feasibility Check in the BTP-admin POV review: there is no
+// SAP-published API telling us which target systems support mTLS. We
+// maintain a per-engagement catalog of URL/host patterns and pair each
+// with a human-readable note. The catalog is intentionally a code map,
+// not a YAML file — engagements that need to extend it edit this list
+// and redeploy. Operators want a DB-backed editor, that's a follow-up.
+const MTLS_CAPABLE_TARGETS = [
+  { pattern: /(^|\.)successfactors\.com$/i,  description: 'SuccessFactors supports mTLS via /sf/oauth/token with client certs'  },
+  { pattern: /(^|\.)ariba\.com$/i,           description: 'Ariba Network supports mTLS for outbound integrations'              },
+  { pattern: /(^|\.)concursolutions\.com$/i, description: 'Concur supports mTLS authentication'                                 },
+  { pattern: /\.hana\.ondemand\.com$/i,      description: 'SAP-internal cloud services support mTLS via SAP Cloud Root CA chain' },
+  { pattern: /\.s4hana\.ondemand\.com$/i,    description: 'S/4HANA Cloud supports mTLS for outbound (Communication Arrangements)' },
+];
+
+function isMtlsCapableUrl(url) {
+  if (!url) return null;
+  try {
+    const host = new URL(url).hostname;
+    return MTLS_CAPABLE_TARGETS.find((e) => e.pattern.test(host)) || null;
+  } catch { return null; }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function parseCertNotAfter(destCfg) {
   // The destination service returns x509 certs as PEM string in `KeyStoreLocation`
@@ -88,36 +226,50 @@ class DestinvService extends cds.ApplicationService {
       if (!keys) return mockDestinations();
 
       const all = [];
+      const perSubaccount = []; // [{ creds, dests }] for the probe pass below
       for (const k of keys) {
         try {
           const data = await destApiGet(k, '/destination-configuration/v1/subaccountDestinations');
           const items = Array.isArray(data) ? data : (data?.destinationConfigurations ?? []);
+          const dests = [];
           for (const d of items) {
             const certNotAfter = parseCertNotAfter(d);
-            all.push({
-              subaccountId:   k.subaccountId,
-              subaccountName: k.subaccountName,
-              name:           d.Name,
-              type:           d.Type || 'HTTP',
-              proxyType:      d.ProxyType || 'Internet',
-              url:            d.URL || '',
-              authentication: d.Authentication || 'NoAuthentication',
-              description:    d.Description || '',
+            const row = {
+              subaccountId:    k.subaccountId,
+              subaccountName:  k.subaccountName,
+              name:            d.Name,
+              type:            d.Type || 'HTTP',
+              proxyType:       d.ProxyType || 'Internet',
+              url:             d.URL || '',
+              authentication:  d.Authentication || 'NoAuthentication',
+              description:     d.Description || '',
               additionalProps: JSON.stringify(d),
               certNotAfter,
-              daysToExpiry:   daysUntil(certNotAfter),
-              // TODO: implement /destination-configuration/v1/destinations/{name}/check
-              //       to populate lastTestStatus. Today the service does not
-              //       expose a public /check endpoint — we'd need to GET the
-              //       destination, follow URL with the configured auth, and
-              //       report 200/401/timeout. Skipping in v1.
-              lastTestStatus: 'UNKNOWN',
-            });
+              daysToExpiry:    daysUntil(certNotAfter),
+              lastTestStatus:  'UNKNOWN', // overwritten by the probe pass
+            };
+            all.push(row);
+            dests.push(row);
           }
+          if (dests.length) perSubaccount.push({ creds: k, dests });
         } catch (e) {
           LOG.warn(`Skipping subaccount ${k.subaccountName}:`, e.message);
         }
       }
+
+      // Reachability probe — bounded parallel per subaccount. Failures are
+      // swallowed; the row's lastTestStatus stays 'UNKNOWN' if the probe
+      // pass itself crashes. Per-destination errors map to UNREACHABLE /
+      // AUTH_FAILED / TIMEOUT inside probeDestination.
+      await Promise.all(perSubaccount.map(async ({ creds, dests }) => {
+        try {
+          const statuses = await probeAll(creds, dests);
+          for (const d of dests) d.lastTestStatus = statuses.get(d.name) || 'UNKNOWN';
+        } catch (e) {
+          LOG.warn(`Probe pass failed for ${creds.subaccountName}: ${e.message}`);
+        }
+      }));
+
       return all;
     });
 
@@ -173,13 +325,64 @@ class DestinvService extends cds.ApplicationService {
           }
         }
 
-        // TODO: DANGLING_TARGET — would require destApiTest (see TODO above)
-        //       to verify last-known status; without that we cannot detect
-        //       targets pointing at decommissioned systems.
+        // DANGLING_TARGET ------------------------------------------------------
+        // Powered by the T1.4 reachability probe — we trust a deliberate
+        // UNREACHABLE result (probe ran and got 4xx/5xx or network error).
+        // TIMEOUT is excluded: a target that's just slow shouldn't be
+        // flagged as dangling. NOT_PROBED also excluded (we never probed).
+        if (policy.flagDanglingTargets && d.lastTestStatus === 'UNREACHABLE') {
+          const k = ignoreKey(d.subaccountId, d.name, 'DANGLING_TARGET');
+          findings.push({
+            code:            'DANGLING_TARGET',
+            severity:        isProd(d) ? 'error' : 'warn',
+            subaccountId:    d.subaccountId,
+            destinationName: d.name,
+            summary:         `Destination "${d.name}" target appears unreachable (probe returned UNREACHABLE)`,
+            detail:          JSON.stringify({ url: d.url, lastTestStatus: d.lastTestStatus }),
+            ignored:         ignoreSet.has(k),
+            ignoreReason:    ignoreSet.get(k) || '',
+          });
+        }
 
-        // TODO: MTLS_AVAILABLE_NOT_USED — needs catalog of which target systems
-        //       support mTLS. Build a YAML registry per engagement and ship
-        //       in db/seed/.
+        // MTLS_AVAILABLE_NOT_USED ---------------------------------------------
+        // For target systems that we KNOW support mTLS (curated catalog),
+        // flag destinations that authenticate weakly (BasicAuth or
+        // OAuth-without-client-cert). ClientCertificateAuthentication +
+        // SAML/Principal flows pass.
+        const mtlsEntry = isMtlsCapableUrl(d.url);
+        if (policy.requireMtlsForProd && mtlsEntry && isProd(d)
+            && !/clientcert|samlassertion|principalpropagation|mtls/i.test(d.authentication || '')) {
+          const k = ignoreKey(d.subaccountId, d.name, 'MTLS_AVAILABLE_NOT_USED');
+          findings.push({
+            code:            'MTLS_AVAILABLE_NOT_USED',
+            severity:        'warn',
+            subaccountId:    d.subaccountId,
+            destinationName: d.name,
+            summary:         `Target supports mTLS but "${d.name}" is using ${d.authentication}`,
+            detail:          JSON.stringify({ url: d.url, authentication: d.authentication, catalog: mtlsEntry.description }),
+            ignored:         ignoreSet.has(k),
+            ignoreReason:    ignoreSet.get(k) || '',
+          });
+        }
+      }
+
+      // Fire ANS notifications for critical, unacknowledged findings.
+      // The library is a no-op when ANS isn't configured, so this is
+      // safe to call unconditionally; de-dup window suppresses repeats.
+      const alertable = findings.filter((f) => !f.ignored && f.severity === 'error');
+      if (alertable.length && ans.hasCredentials()) {
+        ans.notifyFindings(alertable, (f) => ({
+          eventType: `destination.${f.code.toLowerCase()}`,
+          severity:  'ERROR',
+          subject:   `${f.code} — ${f.destinationName} (${f.subaccountId})`,
+          body:      f.summary,
+          resource: {
+            resourceName:     f.destinationName,
+            resourceType:     'btp.destination',
+            resourceInstance: `${f.subaccountId}/${f.destinationName}`,
+          },
+          tags: { subaccount: f.subaccountId, code: f.code, severity: f.severity },
+        })).catch((e) => LOG.warn(`ANS notify failed: ${e.message}`));
       }
 
       return findings;
@@ -198,6 +401,8 @@ class DestinvService extends cds.ApplicationService {
         certsExpiring14d:  dests.filter((d) => d.daysToExpiry !== null && d.daysToExpiry <= 14).length,
         findings:          open.length,
         criticalFindings:  open.filter((f) => f.severity === 'error').length,
+        dataSource:        keys && keys.length > 0 ? 'live' : 'mock',
+        lastSyncAt:        new Date().toISOString(),
       };
     });
 
@@ -220,15 +425,21 @@ async function getPolicy() {
 }
 
 module.exports = DestinvService;
-module.exports.__test__ = { daysUntil, parseCertNotAfter, getDestinationKeys };
+module.exports.__test__ = {
+  daysUntil, parseCertNotAfter, getDestinationKeys,
+  shouldProbeUrl, buildProbeHeaders, classifyProbeError, probeDestination, probeAll,
+  isMtlsCapableUrl, MTLS_CAPABLE_TARGETS,
+  _resetProbeCache: () => _probeCache.clear(),
+};
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockDestinations() {
   return [
-    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 's4-erp',         type: 'HTTP', proxyType: 'OnPremise', url: 'https://s4.acme.local',           authentication: 'BasicAuthentication',     description: 'S/4HANA backend',  additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'UNKNOWN' },
-    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'sf-success',     type: 'HTTP', proxyType: 'Internet',  url: 'https://api.successfactors.com', authentication: 'OAuth2ClientCredentials', description: 'SuccessFactors',   additionalProps: '{}', certNotAfter: '2026-06-15', daysToExpiry: 38,   lastTestStatus: 'UNKNOWN' },
-    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'crm-legacy',     type: 'HTTP', proxyType: 'OnPremise', url: 'https://crm-old.acme.local',     authentication: 'ClientCertificateAuthentication', description: 'CRM',     additionalProps: '{}', certNotAfter: '2026-05-19', daysToExpiry: 11,   lastTestStatus: 'UNKNOWN' },
-    { subaccountId: 'sub-002', subaccountName: 'QA',          name: 's4-erp-qa',      type: 'HTTP', proxyType: 'OnPremise', url: 'https://s4-qa.acme.local',       authentication: 'BasicAuthentication',     description: 'S/4HANA QA',       additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'UNKNOWN' },
-    { subaccountId: 'sub-003', subaccountName: 'Dev',         name: 'mock-svc',       type: 'HTTP', proxyType: 'Internet',  url: 'https://mock.acme.dev',          authentication: 'NoAuthentication',        description: 'Mock service',     additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'UNKNOWN' },
+    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 's4-erp',         type: 'HTTP', proxyType: 'OnPremise', url: 'https://s4.acme.local',           authentication: 'BasicAuthentication',     description: 'S/4HANA backend',  additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'NOT_PROBED' },
+    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'sf-success',     type: 'HTTP', proxyType: 'Internet',  url: 'https://api.successfactors.com', authentication: 'OAuth2ClientCredentials', description: 'SuccessFactors',   additionalProps: '{}', certNotAfter: '2026-06-15', daysToExpiry: 38,   lastTestStatus: 'OK' },
+    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'crm-legacy',     type: 'HTTP', proxyType: 'OnPremise', url: 'https://crm-old.acme.local',     authentication: 'ClientCertificateAuthentication', description: 'CRM',     additionalProps: '{}', certNotAfter: '2026-05-19', daysToExpiry: 11,   lastTestStatus: 'NOT_PROBED' },
+    { subaccountId: 'sub-001', subaccountName: 'Production',  name: 'decommissioned-erp', type: 'HTTP', proxyType: 'Internet', url: 'https://old.example.com',     authentication: 'NoAuthentication',        description: 'Decommissioned ERP', additionalProps: '{}', certNotAfter: '',     daysToExpiry: null, lastTestStatus: 'UNREACHABLE' },
+    { subaccountId: 'sub-002', subaccountName: 'QA',          name: 's4-erp-qa',      type: 'HTTP', proxyType: 'OnPremise', url: 'https://s4-qa.acme.local',       authentication: 'BasicAuthentication',     description: 'S/4HANA QA',       additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'NOT_PROBED' },
+    { subaccountId: 'sub-003', subaccountName: 'Dev',         name: 'mock-svc',       type: 'HTTP', proxyType: 'Internet',  url: 'https://mock.acme.dev',          authentication: 'NoAuthentication',        description: 'Mock service',     additionalProps: '{}', certNotAfter: '',           daysToExpiry: null, lastTestStatus: 'OK' },
   ];
 }

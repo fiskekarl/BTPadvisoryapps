@@ -83,4 +83,29 @@ describe('lib/aicore-client', () => {
       expect(result[0].id).to.equal('cfg-1');
     });
   });
+
+  describe('fetchMetrics', () => {
+    it('sends an OData $filter on startTime range and AI-Resource-Group header', async () => {
+      nock('https://uaa.example.com').post('/oauth/token').reply(200, { access_token: 't', expires_in: 3600 });
+      const fromIso = '2026-02-01T00:00:00.000Z';
+      const toIso   = '2026-05-15T00:00:00.000Z';
+      const scope = nock(AI_URL, { reqheaders: { 'ai-resource-group': 'finance' } })
+        .get('/v2/lm/metrics')
+        .query((q) => q.$filter && q.$filter.includes('startTime ge') && q.$filter.includes('startTime le'))
+        .reply(200, { resources: [{ deploymentId: 'd-1', tokensIn: 100 }] });
+
+      const result = await aicore.fetchMetrics('finance', fromIso, toIso);
+      expect(result).to.have.length(1);
+      expect(result[0].deploymentId).to.equal('d-1');
+      expect(scope.isDone()).to.equal(true);
+    });
+
+    it('returns an empty array when the response has no resources/value', async () => {
+      nock('https://uaa.example.com').post('/oauth/token').reply(200, { access_token: 't', expires_in: 3600 });
+      nock(AI_URL).get('/v2/lm/metrics').query(true).reply(200, {});
+
+      const result = await aicore.fetchMetrics('rg', '2026-01-01T00:00:00Z', '2026-05-01T00:00:00Z');
+      expect(result).to.deep.equal([]);
+    });
+  });
 });

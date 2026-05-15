@@ -18,6 +18,13 @@
     <Toolbar>
       <SearchField placeholder="{i18n>searchPlaceholder}" value="{role>/search}" liveChange="onSearch" width="40%" />
       <ToolbarSpacer />
+      <ObjectStatus
+        text="{= ${role>/summary/dataSource} === 'live' ? 'Live data' : 'Mock data' }"
+        state="{= ${role>/summary/dataSource} === 'live' ? 'Success' : 'Error' }"
+        icon="{= ${role>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when SUBACCOUNT_KEYS env var is set with XSUAA entries; mock otherwise." />
+      <Label text="Synced:" />
+      <Text text="{path: 'role>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
       <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
     </Toolbar>

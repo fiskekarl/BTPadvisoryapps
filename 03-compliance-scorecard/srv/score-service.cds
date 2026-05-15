@@ -46,6 +46,8 @@ service ScoreService {
     ruleCount       : Integer;
     perSubaccount   : array of ScoreRow;
     findings        : array of FindingRow;
+    dataSource      : String(10); // 'live' | 'mixed' | 'mock'
+    lastSyncAt      : String(30); // ISO 8601 timestamp of this scorecard's compute
   }
 
   /** Run all enabled rules and return the live scorecard (no DB write). */
@@ -53,6 +55,17 @@ service ScoreService {
 
   /** Run + persist a snapshot for "before vs after" workshop comparisons. */
   action runScan(label: String) returns UUID;
+
+  /**
+   * Import the rule section of a shared baseline pack — upserts each rule
+   * keyed by id. Returns "Imported N rules from pack <version>".
+   */
+  @(restrict: [{ grant: 'EXECUTE', to: 'ScoreAdmin' }])
+  action importBaseline(packJson: LargeString) returns String;
+
+  /** Export the current Rule table as a baseline-pack-shaped JSON fragment. */
+  @(restrict: [{ grant: 'EXECUTE', to: 'ScoreAdmin' }])
+  function exportBaseline() returns LargeString;
 
   @(restrict: [
     { grant: 'READ',             to: 'ScoreViewer' },

@@ -3,7 +3,7 @@
 const { expect } = require('chai');
 const { __test__ } = require('../../srv/destinv-service');
 
-const { daysUntil, parseCertNotAfter, getDestinationKeys } = __test__;
+const { daysUntil, parseCertNotAfter, getDestinationKeys, isMtlsCapableUrl, MTLS_CAPABLE_TARGETS } = __test__;
 
 describe('destinv-service pure helpers', () => {
 
@@ -68,6 +68,41 @@ describe('destinv-service pure helpers', () => {
       const keys = getDestinationKeys();
       expect(keys).to.have.length(1);
       expect(keys[0].subaccountId).to.equal('self');
+    });
+  });
+
+  describe('isMtlsCapableUrl', () => {
+    it('returns null for empty / invalid URL', () => {
+      expect(isMtlsCapableUrl(null)).to.equal(null);
+      expect(isMtlsCapableUrl('')).to.equal(null);
+      expect(isMtlsCapableUrl('not a url')).to.equal(null);
+    });
+
+    it('matches SuccessFactors hosts', () => {
+      const r = isMtlsCapableUrl('https://api.successfactors.com/odata/v2');
+      expect(r).to.not.equal(null);
+      expect(r.description).to.match(/SuccessFactors/i);
+    });
+
+    it('matches SAP-internal *.hana.ondemand.com hosts', () => {
+      expect(isMtlsCapableUrl('https://api.foo.hana.ondemand.com/svc')).to.not.equal(null);
+    });
+
+    it('does NOT match arbitrary internet hosts', () => {
+      expect(isMtlsCapableUrl('https://www.example.com')).to.equal(null);
+      expect(isMtlsCapableUrl('https://acme.local')).to.equal(null);
+    });
+
+    it('does NOT match suffix-spoofing hosts (e.g. evil-successfactors.com)', () => {
+      expect(isMtlsCapableUrl('https://evil-successfactors.com')).to.equal(null);
+      expect(isMtlsCapableUrl('https://successfactors.com.evil.io')).to.equal(null);
+    });
+
+    it('catalog entries each have a pattern + description', () => {
+      for (const e of MTLS_CAPABLE_TARGETS) {
+        expect(e.pattern).to.be.instanceOf(RegExp);
+        expect(e.description).to.be.a('string').with.length.greaterThan(0);
+      }
     });
   });
 });

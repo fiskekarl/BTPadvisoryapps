@@ -25,6 +25,12 @@ describe('CostService (integration)', () => {
     expect(data.currency).to.equal('EUR');
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/cost/getSummary()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('getCostTree() returns hierarchical node rollups', async () => {
     const { data } = await GET('/odata/v4/cost/getCostTree()');
     expect(data.value).to.be.an('array').with.length.greaterThan(0);

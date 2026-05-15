@@ -33,7 +33,7 @@ service LifecycleService {
     usedForProd         : String(30);
     serviceInstanceCount: Integer;
     roleCollectionCount : Integer;
-    activeUserCount     : Integer;       // last 30 days
+    activeUserCount     : Integer;       // distinct users currently assigned to any RC in the subaccount
   }
 
   /** A single drift finding produced by comparing a subaccount to its tier baseline. */
@@ -70,6 +70,8 @@ service LifecycleService {
     driftFindings       : Integer;   // not-ignored
     criticalDrifts      : Integer;   // severity = error, not ignored
     auditEvents30d      : Integer;
+    dataSource          : String(10); // 'live' | 'mixed' | 'mock'
+    lastSyncAt          : String(30); // ISO 8601 timestamp of this summary's compute
   }
 
   // ─── Functions ──────────────────────────────────────────────────────────────
@@ -91,6 +93,22 @@ service LifecycleService {
    * trailing N days (default 30, max 90).
    */
   function getAuditActivity(subaccountId: String, days: Integer) returns array of AuditEntry;
+
+  /**
+   * Import a baseline pack — applies the 01-subaccount-lifecycle.driftBaselines
+   * section, upserting each (tier, resourceType) row. Returns a short summary
+   * string (e.g. "Imported 5 baselines from pack 2026.05").
+   */
+  @(restrict: [{ grant: 'EXECUTE', to: 'LifecycleAdmin' }])
+  action importBaseline(packJson: LargeString) returns String;
+
+  /**
+   * Export the current DriftBaseline table as a baseline-pack-shaped JSON
+   * fragment. Returns the JSON string so an operator can save and ship it
+   * to the next engagement.
+   */
+  @(restrict: [{ grant: 'EXECUTE', to: 'LifecycleAdmin' }])
+  function exportBaseline() returns LargeString;
 
   // ─── Persisted CRUD ─────────────────────────────────────────────────────────
 

@@ -26,6 +26,13 @@
         </items>
       </Select>
       <ToolbarSpacer />
+      <ObjectStatus
+        text="{= ${cleancore>/summary/dataSource} === 'live' ? 'Live data' : 'Mock data' }"
+        state="{= ${cleancore>/summary/dataSource} === 'live' ? 'Success' : 'Error' }"
+        icon="{= ${cleancore>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when Cloud SDK is bound AND at least one ScanRun has persisted (i.e., the ABAP scanner has been reached at least once). Mock otherwise." />
+      <Label text="Synced:" />
+      <Text text="{path: 'cleancore>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <Button text="{i18n>btnScan}"    icon="sap-icon://syntax"          press="onScan" type="Emphasized" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
       <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />

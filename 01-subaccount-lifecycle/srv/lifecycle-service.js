@@ -56,10 +56,20 @@ async function collectLastActivity(saKeys) {
 }
 
 // ─── Per-subaccount enrichment counts ─────────────────────────────────────────
+//
+// For each subaccount key we collect three independent integers:
+//   services       — service instances visible via Service Manager
+//   rcs            — role collections in the subaccount XSUAA tenant
+//   activeUsers    — distinct users assigned to at least one RC in this
+//                    subaccount (cross-RC dedup by email)
+//
+// The activeUsers count replicates app #5's enumeration rather than calling
+// it over OData — each app stays independent (no cross-app trust setup),
+// matching the existing pattern in srv/score-service.js for app #3.
 async function collectCounts(saKeys) {
   const counts = {};
   await Promise.all(saKeys.map(async (k) => {
-    counts[k.subaccountId] = { services: 0, rcs: 0 };
+    counts[k.subaccountId] = { services: 0, rcs: 0, activeUsers: 0 };
     if (k.serviceManager) {
       try {
         const items = await sa.getServiceInstances(k);
@@ -72,12 +82,33 @@ async function collectCounts(saKeys) {
       try {
         const rcs = await sa.getRoleCollections(k);
         counts[k.subaccountId].rcs = rcs.length;
+        counts[k.subaccountId].activeUsers = await uniqueUserCount(k, rcs);
       } catch (e) {
         cds.log('lifecycle-service').warn(`RC skip ${k.subaccountName}: ${e.message}`);
       }
     }
   }));
   return counts;
+}
+
+// Walk every RC, fetch its users, dedup by email. Per-RC failures are
+// logged and skipped so one broken RC doesn't zero out the whole count.
+async function uniqueUserCount(k, rcs) {
+  const seen = new Set();
+  await Promise.all(rcs.map(async (rc) => {
+    const rcName = rc.name || rc.roleCollectionName;
+    if (!rcName) return;
+    try {
+      const users = await sa.getRoleCollectionUsers(k, rcName);
+      for (const u of users) {
+        const email = (u.email || u.userId || u.user || '').toLowerCase();
+        if (email) seen.add(email);
+      }
+    } catch (e) {
+      cds.log('lifecycle-service').warn(`Users skip ${k.subaccountName}/${rcName}: ${e.message}`);
+    }
+  }));
+  return seen.size;
 }
 
 // ─── Service Implementation ───────────────────────────────────────────────────
@@ -113,7 +144,7 @@ class LifecycleService extends cds.ApplicationService {
         const days    = last
           ? Math.floor((Date.now() - new Date(last).getTime()) / 86_400_000)
           : null;
-        const c       = counts[subRow.guid] || { services: 0, rcs: 0 };
+        const c       = counts[subRow.guid] || { services: 0, rcs: 0, activeUsers: 0 };
 
         return {
           subaccountId:        subRow.guid,
@@ -131,7 +162,7 @@ class LifecycleService extends cds.ApplicationService {
           usedForProd:         subRow.usedForProduction || 'UNSET',
           serviceInstanceCount: c.services,
           roleCollectionCount:  c.rcs,
-          activeUserCount:     0, // TODO: requires per-RC user enumeration; defer until app #5 feed
+          activeUserCount:     c.activeUsers,
         };
       });
     });
@@ -296,6 +327,55 @@ class LifecycleService extends cds.ApplicationService {
       return all.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
     });
 
+    // ── importBaseline ───────────────────────────────────────────────────────
+    this.on('importBaseline', async (req) => {
+      let pack; try { pack = JSON.parse(req.data.packJson || '{}'); }
+      catch (e) { req.error(400, `Invalid baseline JSON: ${e.message}`); return; }
+      const section = pack['01-subaccount-lifecycle']?.driftBaselines || [];
+      if (!Array.isArray(section) || section.length === 0) {
+        return `No 01-subaccount-lifecycle.driftBaselines section found in pack ${pack.version || '?'}`;
+      }
+      let upserted = 0;
+      for (const row of section) {
+        if (!row.tier || !row.resourceType) continue;
+        const existing = await cds.db.run(
+          SELECT.one.from('com.btpconsulting.subaccountlifecycle.DriftBaseline')
+            .where({ tier: row.tier, resourceType: row.resourceType })
+        );
+        const data = {
+          tier:         row.tier,
+          resourceType: row.resourceType,
+          expectedJson: row.expectedJson || '{}',
+          note:         row.note || '',
+        };
+        if (existing) {
+          await cds.db.run(UPDATE('com.btpconsulting.subaccountlifecycle.DriftBaseline').set(data)
+            .where({ tier: row.tier, resourceType: row.resourceType }));
+        } else {
+          await cds.db.run(INSERT.into('com.btpconsulting.subaccountlifecycle.DriftBaseline').entries(data));
+        }
+        upserted++;
+      }
+      return `Imported ${upserted} DriftBaseline row(s) from pack ${pack.version || '?'}`;
+    });
+
+    // ── exportBaseline ───────────────────────────────────────────────────────
+    this.on('exportBaseline', async () => {
+      const rows = await cds.db.run(SELECT.from('com.btpconsulting.subaccountlifecycle.DriftBaseline'));
+      return JSON.stringify({
+        version:     `export-${new Date().toISOString().slice(0, 10)}`,
+        name:        'Exported DriftBaseline snapshot',
+        '01-subaccount-lifecycle': {
+          driftBaselines: rows.map((r) => ({
+            tier:         r.tier,
+            resourceType: r.resourceType,
+            expectedJson: r.expectedJson,
+            note:         r.note || '',
+          })),
+        },
+      }, null, 2);
+    });
+
     // ── getSummary ───────────────────────────────────────────────────────────
     this.on('getSummary', async () => {
       const subs  = await this.send('getSubaccounts');
@@ -303,6 +383,12 @@ class LifecycleService extends cds.ApplicationService {
       const open  = drift.filter((d) => !d.ignored);
 
       const audit30d = await this.send('getAuditActivity', { subaccountId: null, days: 30 });
+
+      const hasCis  = !!cisCreds;
+      const hasKeys = sa.loadKeys().length > 0;
+      const dataSource = hasCis && hasKeys ? 'live'
+                       : hasCis || hasKeys ? 'mixed'
+                       : 'mock';
 
       return {
         totalSubaccounts:    subs.length,
@@ -312,6 +398,8 @@ class LifecycleService extends cds.ApplicationService {
         driftFindings:       open.length,
         criticalDrifts:      open.filter((d) => d.severity === 'error').length,
         auditEvents30d:      audit30d.length,
+        dataSource,
+        lastSyncAt:          new Date().toISOString(),
       };
     });
 
@@ -320,17 +408,17 @@ class LifecycleService extends cds.ApplicationService {
 }
 
 module.exports = LifecycleService;
-module.exports.__test__ = { isoToday, isoDaysAgo, fingerprint, inferTier, envFor, collectLastActivity, collectCounts };
+module.exports.__test__ = { isoToday, isoDaysAgo, fingerprint, inferTier, envFor, collectLastActivity, collectCounts, uniqueUserCount };
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockSubaccounts() {
   return [
-    { subaccountId: 'sub-001', displayName: 'Production',  state: 'STARTED', region: 'eu10', environment: 'CF',   tier: 'prod', parentName: 'Global Account', costCenter: 'CC-1001', department: 'IT Operations', createdAt: '2023-01-15', lastActivityAt: isoDaysAgo(0),   daysInactive: 0,    usedForProd: 'USED_FOR_PRODUCTION',     serviceInstanceCount: 18, roleCollectionCount: 12, activeUserCount: 0 },
-    { subaccountId: 'sub-002', displayName: 'QA',          state: 'STARTED', region: 'eu10', environment: 'CF',   tier: 'qa',   parentName: 'Global Account', costCenter: 'CC-1002', department: 'Software Eng',  createdAt: '2023-02-01', lastActivityAt: isoDaysAgo(2),   daysInactive: 2,    usedForProd: 'NOT_USED_FOR_PRODUCTION', serviceInstanceCount: 14, roleCollectionCount: 10, activeUserCount: 0 },
-    { subaccountId: 'sub-003', displayName: 'Dev',         state: 'STARTED', region: 'eu10', environment: 'CF',   tier: 'dev',  parentName: 'Global Account', costCenter: 'CC-1002', department: 'Software Eng',  createdAt: '2023-02-01', lastActivityAt: isoDaysAgo(0),   daysInactive: 0,    usedForProd: 'NOT_USED_FOR_PRODUCTION', serviceInstanceCount: 22, roleCollectionCount: 14, activeUserCount: 0 },
-    { subaccountId: 'sub-004', displayName: 'Integration', state: 'STARTED', region: 'eu10', environment: 'Kyma', tier: 'prod', parentName: 'Global Account', costCenter: 'CC-1004', department: 'Architecture',  createdAt: '2023-04-01', lastActivityAt: isoDaysAgo(5),   daysInactive: 5,    usedForProd: 'USED_FOR_PRODUCTION',     serviceInstanceCount: 9,  roleCollectionCount: 7,  activeUserCount: 0 },
-    { subaccountId: 'sub-005', displayName: 'Sandbox',     state: 'STARTED', region: 'eu10', environment: 'CF',   tier: 'dev',  parentName: 'Global Account', costCenter: '',        department: '',              createdAt: '2024-01-01', lastActivityAt: isoDaysAgo(120), daysInactive: 120,  usedForProd: 'NOT_USED_FOR_PRODUCTION', serviceInstanceCount: 3,  roleCollectionCount: 2,  activeUserCount: 0 },
-    { subaccountId: 'sub-006', displayName: 'QA-Old',      state: 'STOPPED', region: 'eu10', environment: 'CF',   tier: 'qa',   parentName: 'Global Account', costCenter: 'CC-1002', department: 'Software Eng',  createdAt: '2022-11-01', lastActivityAt: isoDaysAgo(200), daysInactive: 200,  usedForProd: 'NOT_USED_FOR_PRODUCTION', serviceInstanceCount: 0,  roleCollectionCount: 5,  activeUserCount: 0 },
+    { subaccountId: 'sub-001', displayName: 'Production',  state: 'STARTED', region: 'eu10', environment: 'CF',   tier: 'prod', parentName: 'Global Account', costCenter: 'CC-1001', department: 'IT Operations', createdAt: '2023-01-15', lastActivityAt: isoDaysAgo(0),   daysInactive: 0,    usedForProd: 'USED_FOR_PRODUCTION',     serviceInstanceCount: 18, roleCollectionCount: 12, activeUserCount: 24 },
+    { subaccountId: 'sub-002', displayName: 'QA',          state: 'STARTED', region: 'eu10', environment: 'CF',   tier: 'qa',   parentName: 'Global Account', costCenter: 'CC-1002', department: 'Software Eng',  createdAt: '2023-02-01', lastActivityAt: isoDaysAgo(2),   daysInactive: 2,    usedForProd: 'NOT_USED_FOR_PRODUCTION', serviceInstanceCount: 14, roleCollectionCount: 10, activeUserCount: 18 },
+    { subaccountId: 'sub-003', displayName: 'Dev',         state: 'STARTED', region: 'eu10', environment: 'CF',   tier: 'dev',  parentName: 'Global Account', costCenter: 'CC-1002', department: 'Software Eng',  createdAt: '2023-02-01', lastActivityAt: isoDaysAgo(0),   daysInactive: 0,    usedForProd: 'NOT_USED_FOR_PRODUCTION', serviceInstanceCount: 22, roleCollectionCount: 14, activeUserCount: 22 },
+    { subaccountId: 'sub-004', displayName: 'Integration', state: 'STARTED', region: 'eu10', environment: 'Kyma', tier: 'prod', parentName: 'Global Account', costCenter: 'CC-1004', department: 'Architecture',  createdAt: '2023-04-01', lastActivityAt: isoDaysAgo(5),   daysInactive: 5,    usedForProd: 'USED_FOR_PRODUCTION',     serviceInstanceCount: 9,  roleCollectionCount: 7,  activeUserCount: 6  },
+    { subaccountId: 'sub-005', displayName: 'Sandbox',     state: 'STARTED', region: 'eu10', environment: 'CF',   tier: 'dev',  parentName: 'Global Account', costCenter: '',        department: '',              createdAt: '2024-01-01', lastActivityAt: isoDaysAgo(120), daysInactive: 120,  usedForProd: 'NOT_USED_FOR_PRODUCTION', serviceInstanceCount: 3,  roleCollectionCount: 2,  activeUserCount: 2  },
+    { subaccountId: 'sub-006', displayName: 'QA-Old',      state: 'STOPPED', region: 'eu10', environment: 'CF',   tier: 'qa',   parentName: 'Global Account', costCenter: 'CC-1002', department: 'Software Eng',  createdAt: '2022-11-01', lastActivityAt: isoDaysAgo(200), daysInactive: 200,  usedForProd: 'NOT_USED_FOR_PRODUCTION', serviceInstanceCount: 0,  roleCollectionCount: 5,  activeUserCount: 0  },
   ];
 }
 

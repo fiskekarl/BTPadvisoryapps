@@ -71,6 +71,8 @@ service IdentService {
     dormantUsers         : Integer;
     findings             : Integer;
     criticalFindings     : Integer;
+    dataSource           : String(10); // 'live' | 'mixed' | 'mock'
+    lastSyncAt           : String(30); // ISO 8601 timestamp of this summary's compute
   }
 
   function getSummary()      returns IdentSummary;

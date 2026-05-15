@@ -226,6 +226,11 @@ class IdentService extends cds.ApplicationService {
         this.send('getFindings'),
       ]);
       const open = findings.filter((f) => !f.ignored);
+      const hasIas  = hasIasCredentials();
+      const hasKeys = sa.loadKeys().length > 0;
+      const dataSource = hasIas && hasKeys ? 'live'
+                       : hasIas || hasKeys ? 'mixed'
+                       : 'mock';
       return {
         iasApps:           apps.length,
         appsWithoutMfa:    apps.filter((a) => a.mfaEnforced === false).length,
@@ -234,6 +239,8 @@ class IdentService extends cds.ApplicationService {
         dormantUsers:      dormant.length,
         findings:          open.length,
         criticalFindings:  open.filter((f) => f.severity === 'error').length,
+        dataSource,
+        lastSyncAt:        new Date().toISOString(),
       };
     });
 

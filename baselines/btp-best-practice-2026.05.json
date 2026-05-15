@@ -1,0 +1,67 @@
+{
+  "version":     "2026.05",
+  "name":        "BTP Best Practice Baseline — 2026.05",
+  "description": "Opinionated baseline distilled from BTP best practices, CIS BTP Benchmark, and ten engagements' worth of lessons. Drop-in pack for every leave-behind deployment.",
+  "lastUpdated": "2026-05-15",
+  "scope":       ["01-subaccount-lifecycle", "03-compliance-scorecard"],
+
+  "01-subaccount-lifecycle": {
+    "driftBaselines": [
+      {
+        "tier":         "prod",
+        "resourceType": "label",
+        "expectedJson": "{\"requiredLabels\":[\"costCenter\",\"department\",\"tier\"]}",
+        "note":         "Production subaccounts must have these labels for chargeback + access-review routing"
+      },
+      {
+        "tier":         "prod",
+        "resourceType": "service-instance",
+        "expectedJson": "{\"requiredServices\":[\"audit-log-management:standard\",\"alert-notification:standard\"]}",
+        "note":         "Every prod subaccount must carry an audit-log instance (compliance) and alert-notification (ops)"
+      },
+      {
+        "tier":         "prod",
+        "resourceType": "role-collection",
+        "expectedJson": "{\"requiredRoleCollections\":[\"Subaccount Administrator\",\"Audit Log Auditor\"]}",
+        "note":         "Admin + dedicated auditor are non-negotiable for SOX/ISO walkthroughs"
+      },
+      {
+        "tier":         "qa",
+        "resourceType": "label",
+        "expectedJson": "{\"requiredLabels\":[\"department\",\"tier\"]}",
+        "note":         "QA: label hygiene without strict cost-center attribution (often shared)"
+      },
+      {
+        "tier":         "dev",
+        "resourceType": "label",
+        "expectedJson": "{\"requiredLabels\":[\"tier\"]}",
+        "note":         "Dev: minimum hygiene, tier label only"
+      }
+    ]
+  },
+
+  "03-compliance-scorecard": {
+    "rules": [
+      { "id": "PROD_REQUIRES_LABEL_COSTCENTER",       "title": "Production subaccounts must carry a costCenter label",                              "description": "All subaccounts marked usedForProduction must have a costCenter label for chargeback and FinOps governance.",                   "category": "governance", "severity": "error", "kind": "label-required",                  "paramsJson": "{ \"scope\": \"prod\", \"label\": \"costCenter\" }" },
+      { "id": "PROD_REQUIRES_LABEL_DEPARTMENT",       "title": "Production subaccounts must carry a department label",                              "description": "Mirror of costCenter but for org-chart attribution.",                                                                            "category": "governance", "severity": "warn",  "kind": "label-required",                  "paramsJson": "{ \"scope\": \"prod\", \"label\": \"department\" }" },
+      { "id": "PROD_NO_BASIC_AUTH",                   "title": "Production destinations must not use BasicAuthentication",                          "description": "BasicAuth is forbidden in production. Use OAuth2*, ClientCertificate, or Principal Propagation.",                                "category": "identity",   "severity": "error", "kind": "destination-auth-forbidden",      "paramsJson": "{ \"scope\": \"prod\", \"forbidden\": [\"BasicAuthentication\"] }" },
+      { "id": "INACTIVE_SUBACCOUNT_90D",              "title": "No subaccount should be inactive for 90+ days",                                     "description": "Inactive subaccounts incur cost and create an unowned attack surface. Decommission or document a clear reason.",                 "category": "cost",       "severity": "warn",  "kind": "max-days-inactive",               "paramsJson": "{ \"maxDays\": 90 }" },
+      { "id": "TIER_NAMING_CONVENTION",               "title": "Subaccount displayName must indicate tier",                                          "description": "displayName should contain prod / qa / dev / sandbox so cockpit users know the environment at a glance.",                       "category": "governance", "severity": "info",  "kind": "name-pattern",                    "paramsJson": "{ \"pattern\": \"(prod|qa|test|dev|sandbox)\", \"flags\": \"i\" }" },
+      { "id": "MFA_FOR_ADMIN_ROLE_COLLECTIONS",       "title": "Admin role collections must require MFA",                                            "description": "IAS authentication policy must enforce MFA for any role-collection containing 'Admin'.",                                         "category": "identity",   "severity": "error", "kind": "mfa-for-admin-rcs",               "paramsJson": "{}" },
+      { "id": "PROD_USEDFORPRODUCTION_FLAG",          "title": "Production subaccounts must have usedForProduction = USED_FOR_PRODUCTION",          "description": "SAP Production support tier hinges on this flag. Misalignment leads to support disputes and incorrect SLA routing.",            "category": "governance", "severity": "error", "kind": "usedForProduction-flag",          "paramsJson": "{ \"scope\": \"prod\", \"shouldBe\": \"USED_FOR_PRODUCTION\" }" },
+      { "id": "DEV_USEDFORPRODUCTION_FLAG",           "title": "Dev subaccounts must NOT have usedForProduction = USED_FOR_PRODUCTION",             "description": "Dev/sandbox subaccounts incorrectly flagged as production cost more, get production support routing for non-prod issues, and confuse audit reports.", "category": "governance", "severity": "warn",  "kind": "usedForProduction-flag",          "paramsJson": "{ \"scope\": \"dev\", \"shouldBe\": \"NOT_USED_FOR_PRODUCTION\" }" },
+      { "id": "PROD_DESTINATIONS_HTTPS_ONLY",         "title": "Production destinations must use HTTPS",                                            "description": "Plaintext HTTP destinations leak credentials and payload in transit. CIS BTP Benchmark §3.4.",                                   "category": "network",    "severity": "error", "kind": "destination-url-scheme",          "paramsJson": "{ \"scope\": \"prod\", \"allowedSchemes\": [\"https\"] }" },
+      { "id": "ALL_DESTINATIONS_HTTPS_OR_RFC",        "title": "All destinations must use HTTPS, RFC, or LDAPS (no plaintext)",                     "description": "Plaintext protocols are never appropriate outside isolated dev/sandbox. Even non-prod should prefer encrypted transport.",       "category": "network",    "severity": "warn",  "kind": "destination-url-scheme",          "paramsJson": "{ \"scope\": \"all\", \"allowedSchemes\": [\"https\", \"sapsync\", \"sapnwrfc\", \"ldaps\"] }" },
+      { "id": "LOCAL_HOSTNAME_REQUIRES_ONPREMISE",    "title": "Destinations to *.local / *.internal must use OnPremise proxy type",                "description": "These hostnames imply an on-prem system. Wrong proxyType silently fails to reach through Cloud Connector.",                      "category": "network",    "severity": "warn",  "kind": "destination-proxy-type-for-local","paramsJson": "{}" },
+      { "id": "PROD_DESTINATION_AUTH_ALLOWLIST",      "title": "Production destinations: only ClientCert, OAuth2SAMLBearer, PrincipalPropagation, or OAuth2JWTBearer", "description": "Production must use strong, federated auth. Locks down to a small, audited set rather than enumerating every forbidden flow.", "category": "identity",   "severity": "error", "kind": "destination-auth-allowlist",      "paramsJson": "{ \"scope\": \"prod\", \"allowed\": [\"ClientCertificateAuthentication\", \"OAuth2SAMLBearerAssertion\", \"OAuth2JWTBearerAssertion\", \"PrincipalPropagation\", \"SAMLAssertion\"] }" },
+      { "id": "NO_TMP_OR_TEST_DESTINATIONS_IN_PROD",  "title": "Production must not contain destinations named *-tmp-*, *-test-*, *-poc-*",        "description": "These naming patterns indicate experimental destinations that escaped into production. Block them.",                            "category": "hygiene",    "severity": "warn",  "kind": "destination-name-pattern",        "paramsJson": "{ \"scope\": \"prod\", \"denyPattern\": \"(^|[-_])(tmp|test|poc|sandbox|demo)([-_]|$)\", \"flags\": \"i\" }" },
+      { "id": "DESTINATION_NAMING_CONVENTION",        "title": "Destination names must follow alphanumeric-with-hyphens convention",                "description": "Reject destinations with whitespace, slashes, or special chars in their names — pre-empts integration-test breakage.",          "category": "hygiene",    "severity": "info",  "kind": "destination-name-pattern",        "paramsJson": "{ \"scope\": \"all\", \"allowPattern\": \"^[a-zA-Z][a-zA-Z0-9_-]*$\" }" },
+      { "id": "SUBACCOUNTS_HAVE_PARENT_DIRECTORY",    "title": "Every subaccount must be under a Directory",                                        "description": "Flat global accounts cannot carry access-review policies, chargeback hierarchy, or directory-level entitlement quotas.",         "category": "governance", "severity": "warn",  "kind": "subaccount-parent-required",      "paramsJson": "{}" },
+      { "id": "MAX_50_DESTINATIONS_PER_SUBACCOUNT",   "title": "No subaccount should have more than 50 destinations",                               "description": "Hygiene threshold: subaccounts past 50 destinations are usually orphaned dumping grounds. Audit and consolidate.",               "category": "hygiene",    "severity": "info",  "kind": "max-destinations-per-subaccount", "paramsJson": "{ \"max\": 50 }" },
+      { "id": "TIER_INFERABLE",                       "title": "Every subaccount must have an inferable tier",                                      "description": "Tier-aware policies (destination auth, MFA, etc.) cannot be enforced on subaccounts whose tier is 'unknown'. Tag with tier/landscape label.", "category": "governance", "severity": "warn",  "kind": "tier-label-consistency",          "paramsJson": "{}" },
+      { "id": "PROD_REQUIRES_DEPARTMENT",             "title": "Production subaccounts must have a department",                                     "description": "Without department, FinOps and access-review notifications cannot route. Distinct from costCenter rule (different remediation path).", "category": "governance", "severity": "warn",  "kind": "department-required",             "paramsJson": "{ \"scope\": \"prod\" }" },
+      { "id": "INACTIVE_SUBACCOUNT_180D_CRITICAL",    "title": "No subaccount inactive for 180+ days (critical)",                                   "description": "Beyond 180 days, retention of an unused subaccount is rarely defensible. Decommission or document.",                            "category": "cost",       "severity": "error", "kind": "max-days-inactive",               "paramsJson": "{ \"maxDays\": 180 }" },
+      { "id": "PROD_NO_NOAUTHENTICATION",             "title": "Production destinations must not use NoAuthentication",                             "description": "NoAuthentication = unauthenticated outbound calls. Acceptable only for public APIs in dev/sandbox.",                            "category": "identity",   "severity": "error", "kind": "destination-auth-forbidden",      "paramsJson": "{ \"scope\": \"prod\", \"forbidden\": [\"NoAuthentication\"] }" }
+    ]
+  }
+}

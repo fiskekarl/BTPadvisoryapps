@@ -53,6 +53,12 @@ sap.ui.define([
 
     onRefresh: function () { this._loadAll(); },
 
+    formatSyncTime: function (iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); }
+      catch (e) { return iso; }
+    },
+
     // ── Scan policy editor ───────────────────────────────────────────────────
     onEditPolicy: function () {
       const m = this._model();

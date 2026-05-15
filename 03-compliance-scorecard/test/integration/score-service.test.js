@@ -32,6 +32,48 @@ describe('ScoreService (integration)', () => {
     expect(data.overallGrade).to.match(/^[A-F]$/);
   });
 
+  it('getScorecard() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/score/getScorecard()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
+  it('importBaseline() upserts rules from a pack payload', async () => {
+    const pack = {
+      version: 'test-2026.05',
+      '03-compliance-scorecard': {
+        rules: [{
+          id: 'TEST_RULE_FROM_PACK', title: 'Test rule', description: 'imported via baseline pack',
+          category: 'governance', severity: 'warn', enabled: true, kind: 'label-required',
+          paramsJson: '{ "scope": "prod", "label": "costCenter" }',
+        }],
+      },
+    };
+    const { data } = await POST('/odata/v4/score/importBaseline', { packJson: JSON.stringify(pack) });
+    const msg = typeof data === 'string' ? data : data.value;
+    expect(msg).to.match(/Imported 1 rule.*test-2026\.05/);
+
+    const after = await GET("/odata/v4/score/Rules?$filter=id eq 'TEST_RULE_FROM_PACK'");
+    expect(after.data.value).to.have.length(1);
+    expect(after.data.value[0].title).to.equal('Test rule');
+  });
+
+  it('exportBaseline() returns a JSON pack containing the rules section', async () => {
+    const { data } = await GET('/odata/v4/score/exportBaseline()');
+    const raw = typeof data === 'string' ? data : data.value;
+    const parsed = JSON.parse(raw);
+    expect(parsed['03-compliance-scorecard'].rules).to.be.an('array').with.length.greaterThan(0);
+  });
+
+  it('importBaseline() rejects malformed JSON with a 400', async () => {
+    let err;
+    try { await POST('/odata/v4/score/importBaseline', { packJson: '{not-json' }); }
+    catch (e) { err = e; }
+    expect(err).to.exist;
+    expect(err.response?.status || err.message).to.satisfy((s) =>
+      String(s).includes('400') || String(s).toLowerCase().includes('invalid'));
+  });
+
   it('runScan persists a ScoreSnapshot and returns a UUID', async () => {
     const before = (await GET('/odata/v4/score/ScoreSnapshots')).data.value.length;
 

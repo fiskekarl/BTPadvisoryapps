@@ -19,13 +19,23 @@ sap.ui.define([
           this._invoke('/getRenewalAlerts(daysAhead=90)')
         ]);
         m.setProperty('/summary',      summary || {});
-        m.setProperty('/entitlements', entitlements || []);
+        m.setProperty('/entitlements', this._withSparklinePoints(entitlements || []));
         m.setProperty('/renewals',     renewals || []);
       } catch (e) {
         MessageToast.show('Load failed: ' + (e.message || e));
       } finally {
         m.setProperty('/busy', false);
       }
+    },
+
+    // LineMicroChart wants numeric x. yearMonth is a string like "2025-04",
+    // so we attach an x = index alongside, keeping the usage value as-is.
+    _withSparklinePoints: function (entitlements) {
+      return entitlements.map((e) => {
+        const history = Array.isArray(e.history) ? e.history : [];
+        const points = history.map((p, i) => ({ x: i, y: Number(p.usage) || 0, yearMonth: p.yearMonth }));
+        return { ...e, sparkline: points };
+      });
     },
 
     _invoke: async function (path) {
@@ -36,6 +46,12 @@ sap.ui.define([
 
     onWindowChange: function () { this._loadAll(); },
     onRefresh:      function () { this._loadAll(); },
+
+    formatSyncTime: function (iso) {
+      if (!iso) return '—';
+      try { return new Date(iso).toLocaleString(); }
+      catch (e) { return iso; }
+    },
 
     onExport: function () {
       const rows = this._model().getProperty('/entitlements') || [];

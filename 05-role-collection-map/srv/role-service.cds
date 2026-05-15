@@ -56,6 +56,8 @@ service RoleService {
     crossTierUsers    : Integer;     // users active in >1 tier
     toxicFindings     : Integer;
     criticalFindings  : Integer;
+    dataSource        : String(10); // 'live' | 'mock'
+    lastSyncAt        : String(30); // ISO 8601 timestamp of this summary's compute
   }
 
   function getSummary()       returns RoleSummary;

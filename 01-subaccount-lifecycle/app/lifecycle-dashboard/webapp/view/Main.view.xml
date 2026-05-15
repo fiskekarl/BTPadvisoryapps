@@ -43,6 +43,13 @@
         </items>
       </Select>
       <ToolbarSpacer />
+      <ObjectStatus
+        text="{= ${lifecycle>/summary/dataSource} === 'live' ? 'Live data' : ${lifecycle>/summary/dataSource} === 'mixed' ? 'Mixed (partial creds)' : 'Mock data' }"
+        state="{= ${lifecycle>/summary/dataSource} === 'live' ? 'Success' : ${lifecycle>/summary/dataSource} === 'mixed' ? 'Warning' : 'Error' }"
+        icon="{= ${lifecycle>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Indicates whether KPIs are computed from live BTP APIs or from built-in mock fixtures. Mock mode triggers when required service-key env vars are unset." />
+      <Label text="Synced:" />
+      <Text text="{path: 'lifecycle>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh" press="onRefresh" />
       <Button text="{i18n>btnExport}"  icon="sap-icon://excel-attachment" press="onExport" />
     </Toolbar>
@@ -62,6 +69,7 @@
               <Column><Text text="{i18n>colCostCenter}" /></Column>
               <Column><Text text="{i18n>colDepartment}" /></Column>
               <Column><Text text="{i18n>colDaysInactive}" /></Column>
+              <Column><Text text="Users" width="5rem" /></Column>
               <Column><Text text="{i18n>colUsedForProd}" /></Column>
             </columns>
             <items>
@@ -77,6 +85,8 @@
                   <Text text="{lifecycle>department}" />
                   <ObjectNumber number="{lifecycle>daysInactive}"
                                 state="{= ${lifecycle>daysInactive} >= 90 ? 'Error' : ${lifecycle>daysInactive} >= 30 ? 'Warning' : 'Success' }" />
+                  <ObjectNumber number="{lifecycle>activeUserCount}"
+                                tooltip="Distinct users currently assigned to any role collection in this subaccount." />
                   <Text text="{lifecycle>usedForProd}" />
                 </cells>
               </ColumnListItem>

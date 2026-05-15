@@ -36,6 +36,12 @@ describe('CertService (integration)', () => {
     expect(data.totalCerts).to.be.greaterThan(0);
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/cert/getSummary()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('AlertThresholds entity is queryable', async () => {
     const { data } = await GET('/odata/v4/cert/AlertThresholds');
     expect(data.value).to.be.an('array');

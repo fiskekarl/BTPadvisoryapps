@@ -50,6 +50,12 @@ describe('IdentService (integration)', () => {
     expect(data.trustConfigs).to.be.a('number');
   });
 
+  it('getSummary() carries data-source provenance', async () => {
+    const { data } = await GET('/odata/v4/ident/getSummary()');
+    expect(data.dataSource).to.equal('mock');
+    expect(data.lastSyncAt).to.match(/^\d{4}-\d{2}-\d{2}T/);
+  });
+
   it('getFindings() returns an array including dormant-user findings', async () => {
     const { data } = await GET('/odata/v4/ident/getFindings()');
     expect(data.value).to.be.an('array');

@@ -16,6 +16,13 @@
     </l:Grid>
 
     <Toolbar>
+      <ObjectStatus
+        text="{= ${destinv>/summary/dataSource} === 'live' ? 'Live data' : 'Mock data' }"
+        state="{= ${destinv>/summary/dataSource} === 'live' ? 'Success' : 'Error' }"
+        icon="{= ${destinv>/summary/dataSource} === 'live' ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+        tooltip="Live when DESTINATION_KEYS env var is set; mock otherwise." />
+      <Label text="Synced:" />
+      <Text text="{path: 'destinv>/summary/lastSyncAt', formatter: '.formatSyncTime'}" />
       <ToolbarSpacer />
       <Button text="{i18n>btnPolicy}"  icon="sap-icon://settings"         press="onEditPolicy" />
       <Button text="{i18n>btnRefresh}" icon="sap-icon://refresh"          press="onRefresh" />
@@ -35,6 +42,7 @@
               <Column><Text text="{i18n>colUrl}"          /></Column>
               <Column><Text text="{i18n>colCertExpiry}"   /></Column>
               <Column><Text text="{i18n>colDaysToExpiry}" /></Column>
+              <Column><Text text="Reachable" /></Column>
             </columns>
             <items>
               <ColumnListItem>
@@ -49,6 +57,9 @@
                   <Text text="{destinv>certNotAfter}" />
                   <ObjectNumber number="{destinv>daysToExpiry}"
                                 state="{= ${destinv>daysToExpiry} == null ? 'None' : ${destinv>daysToExpiry} &lt;= 14 ? 'Error' : ${destinv>daysToExpiry} &lt;= 60 ? 'Warning' : 'Success' }" />
+                  <ObjectStatus text="{destinv>lastTestStatus}"
+                                state="{= ${destinv>lastTestStatus} === 'OK' ? 'Success' : ${destinv>lastTestStatus} === 'NOT_PROBED' || ${destinv>lastTestStatus} === 'UNKNOWN' ? 'None' : ${destinv>lastTestStatus} === 'TIMEOUT' ? 'Warning' : 'Error' }"
+                                tooltip="OK: target responded 2xx-3xx within 5s. AUTH_FAILED: dest service rejected creds (401/403). UNREACHABLE: 4xx/5xx or network error. TIMEOUT: no response in 5s. NOT_PROBED: skipped because OnPremise / RFC / mTLS — these need Cloud Connector or keystore handling we don't replay." />
                 </cells>
               </ColumnListItem>
             </items>

@@ -54,6 +54,8 @@ service EntitleService {
     renewalsNext60d      : Integer;
     estimatedAnnualSaving: Decimal(18, 2);
     currency             : String(10);
+    dataSource           : String(10); // 'live' | 'mixed' | 'mock'
+    lastSyncAt           : String(30); // ISO 8601 timestamp of this summary's compute
   }
 
   function getSummary(months: Integer)         returns EntitleSummary;

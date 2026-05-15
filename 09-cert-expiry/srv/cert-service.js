@@ -3,6 +3,7 @@
 const cds = require('@sap/cds');
 const axios = require('axios');
 const crypto = require('crypto');
+const ans = require('./lib/notification');
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function daysUntil(isoDate) {
@@ -81,33 +82,222 @@ async function loadDestinationCerts() {
 
 // ─── Source: IAS certs ───────────────────────────────────────────────────────
 //
-// IAS exposes its SAML signing & encryption certs at:
-//   GET /Trust  → returns trust configurations with embedded cert PEMs.
-// Same IAS_* env vars as app #4.
+// IAS exposes its trust-configurations (the SPs that trust IAS as IdP, and
+// the upstream IdPs IAS itself trusts) at:
+//   GET /Trust   → list of trust configurations with embedded cert material
+//
+// Cert material lives at one of several locations depending on the trust
+// type (SAML vs OIDC, inline vs metadata-derived). We probe all known
+// shapes and skip any candidate that doesn't decode to a valid X.509 cert,
+// so a partial response from a single trust never poisons the whole scan.
+//
+// Auth: re-uses the IAS_* env vars from app #4. When unset the scan
+// returns []; the service then falls back to mock data for demo mode.
+const _iasTokenCache = { token: null, expiresAt: 0 };
+async function getIasToken() {
+  if (_iasTokenCache.token && Date.now() < _iasTokenCache.expiresAt) return _iasTokenCache.token;
+  const url = process.env.IAS_OAUTH_URL || `${process.env.IAS_API_URL}/oauth2/token`;
+  const resp = await axios.post(url, new URLSearchParams({
+    grant_type:    'client_credentials',
+    client_id:     process.env.IAS_CLIENT_ID,
+    client_secret: process.env.IAS_CLIENT_SECRET,
+  }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30_000 });
+  _iasTokenCache.token     = resp.data.access_token;
+  _iasTokenCache.expiresAt = Date.now() + (resp.data.expires_in - 60) * 1000;
+  return _iasTokenCache.token;
+}
+
+async function iasGet(path) {
+  const token = await getIasToken();
+  const resp = await axios.get(`${process.env.IAS_API_URL}${path}`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
+    timeout: 30_000,
+  });
+  return resp.data;
+}
+
+function collectCertCandidates(trust) {
+  const c = [];
+  const push = (v) => { if (v) c.push(v); };
+  push(trust.signingCertificate);
+  push(trust.certificate);
+  push(trust.samlMetadata?.signingCertificate);
+  push(trust.samlMetadata?.encryptionCertificate);
+  push(trust.openIdConnectConfiguration?.publicKey);
+  if (Array.isArray(trust.signingCertificates))                  c.push(...trust.signingCertificates);
+  if (Array.isArray(trust.samlMetadata?.signingCertificates))    c.push(...trust.samlMetadata.signingCertificates);
+  if (Array.isArray(trust.samlMetadata?.encryptionCertificates)) c.push(...trust.samlMetadata.encryptionCertificates);
+  return c;
+}
+
+function parseCertCandidate(candidate) {
+  // A candidate may be a raw PEM string, a base64-wrapped PEM, or an object
+  // with the cert under .value / .certificate / .content. We coerce all of
+  // these into a Buffer that crypto.X509Certificate can ingest.
+  const raw = typeof candidate === 'string'
+    ? candidate
+    : (candidate?.value || candidate?.certificate || candidate?.content);
+  if (!raw || typeof raw !== 'string') return null;
+  try {
+    const buf = raw.includes('BEGIN CERTIFICATE') ? Buffer.from(raw) : Buffer.from(raw, 'base64');
+    return parsePem(buf);
+  } catch { return null; }
+}
+
 async function loadIasCerts() {
   if (!process.env.IAS_API_URL || !process.env.IAS_CLIENT_ID || !process.env.IAS_CLIENT_SECRET) return [];
-  // TODO: implement IAS OAuth + GET /Trust + parse cert PEMs.
-  return [];
+  const tenantHost = process.env.IAS_API_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
+  const out = [];
+
+  let data;
+  try { data = await iasGet('/Trust'); }
+  catch (e) {
+    cds.log('cert-service').warn(`IAS /Trust fetch failed: ${e.message}`);
+    return [];
+  }
+
+  const items = Array.isArray(data) ? data
+              : (data?.values || data?.trustConfigurations || []);
+  for (const t of items) {
+    const trustName = t.name || t.displayName || t.id || t.providerId || 'unnamed-trust';
+    for (const cand of collectCertCandidates(t)) {
+      const parsed = parseCertCandidate(cand);
+      if (!parsed) continue;
+      out.push({
+        kind:           'IAS_SAML',
+        subaccountId:   'ias-tenant',
+        subaccountName: tenantHost,
+        name:           trustName,
+        ...parsed,
+        blastRadius:    `IAS trust "${trustName}" — affects all federated apps relying on this trust`,
+      });
+    }
+  }
+  return out;
 }
 
 // ─── Source: XSUAA trust configs ─────────────────────────────────────────────
 //
-// Per subaccount:
-//   GET <subaccount-uaa>/authorization/v2/trust-configurations
-// Each trust has a `samlMetadata` blob with a public signing cert.
-// Requires per-subaccount XSUAA service-keys; reuse DESTINATION_KEYS-style
-// pattern with XSUAA_KEYS env var. TODO.
-async function loadXsuaaTrustCerts() {
-  // TODO: requires XSUAA_KEYS env var with per-subaccount XSUAA admin tokens.
+// Per subaccount: GET <xsuaa-api>/sap/rest/authorization/v2/trust-configurations
+// Each trust may carry SAML or OIDC signing cert material — we reuse the
+// IAS cert candidate / parse helpers to handle the field-shape variants.
+//
+// Keys: prefer the dedicated XSUAA_KEYS env var if present (a JSON array of
+// { subaccountId, subaccountName, uaa: {clientid, clientsecret, url}, apiurl }
+// entries — same shape DESTINATION_KEYS uses). Falls back to the multi-purpose
+// SUBACCOUNT_KEYS envelope used by apps #1/#4/#5/#6, mapping each entry's
+// `.xsuaa` block into the same shape. Either source works; whichever exists.
+function getXsuaaKeys() {
+  if (process.env.XSUAA_KEYS) {
+    try {
+      const arr = JSON.parse(process.env.XSUAA_KEYS);
+      if (Array.isArray(arr) && arr.length) return arr;
+    } catch { /* fall through */ }
+  }
+  if (process.env.SUBACCOUNT_KEYS) {
+    try {
+      return JSON.parse(process.env.SUBACCOUNT_KEYS)
+        .filter((k) => k.xsuaa?.uaa && k.xsuaa?.apiurl)
+        .map((k) => ({
+          subaccountId:   k.subaccountId,
+          subaccountName: k.subaccountName,
+          uaa:            k.xsuaa.uaa,
+          apiurl:         k.xsuaa.apiurl,
+        }));
+    } catch { /* fall through */ }
+  }
   return [];
 }
 
-// ─── Source: cTMS signing keys ───────────────────────────────────────────────
-async function loadCtmsCerts() {
-  // TODO: cTMS exposes signing keys via its admin API; scope when an
-  // engagement uses cTMS. Most don't, so deferring.
-  return [];
+async function loadXsuaaTrustCerts() {
+  const keys = getXsuaaKeys();
+  if (keys.length === 0) return [];
+  const out = [];
+  for (const k of keys) {
+    try {
+      const token = await getOAuthToken(k.uaa);
+      const resp = await axios.get(`${k.apiurl}/sap/rest/authorization/v2/trust-configurations`, {
+        headers: { Authorization: `Bearer ${token}` },
+        timeout: 30_000,
+      });
+      const trusts = resp.data?.trustConfigurations
+                  || resp.data?.value
+                  || (Array.isArray(resp.data) ? resp.data : []);
+      for (const t of trusts) {
+        const trustName = t.originKey || t.name || t.id || t.identityProvider || 'unnamed';
+        for (const cand of collectCertCandidates(t)) {
+          const parsed = parseCertCandidate(cand);
+          if (!parsed) continue;
+          out.push({
+            kind:           'XSUAA_TRUST',
+            subaccountId:   k.subaccountId,
+            subaccountName: k.subaccountName || k.subaccountId,
+            name:           trustName,
+            ...parsed,
+            blastRadius:    `XSUAA trust "${trustName}" in ${k.subaccountName || k.subaccountId} — every app in the subaccount that federates via this trust`,
+          });
+        }
+      }
+    } catch (e) {
+      cds.log('cert-service').warn(`XSUAA trust scan failed ${k.subaccountName || k.subaccountId}: ${e.message}`);
+    }
+  }
+  return out;
 }
+
+// ─── Source: cTMS signing keys ───────────────────────────────────────────────
+//
+// cTMS (Cloud Transport Management Service) exposes its landscape signing
+// identities at /v2/landscapeIdentities. Each identity is an X.509 cert
+// used to sign transport packages between landscape nodes. Same auth
+// pattern as app #6: long-lived bearer token in CTMS_TOKEN.
+//
+// Note: full cert content (notBefore / notAfter) requires Admin scope on
+// the cTMS service binding. Without it the response includes metadata
+// (id, name) but the cert PEM may be elided — those rows just don't have
+// a parsable candidate and we skip them.
+async function loadCtmsCerts() {
+  if (!process.env.CTMS_URL || !process.env.CTMS_TOKEN) return [];
+  const out = [];
+  let resp;
+  try {
+    resp = await axios.get(`${process.env.CTMS_URL}/v2/landscapeIdentities`, {
+      headers: { Authorization: `Bearer ${process.env.CTMS_TOKEN}` },
+      timeout: 30_000,
+    });
+  } catch (e) {
+    cds.log('cert-service').warn(`cTMS landscapeIdentities scan failed: ${e.message}`);
+    return [];
+  }
+  const items = resp.data?.landscapeIdentities
+             || resp.data?.value
+             || (Array.isArray(resp.data) ? resp.data : []);
+  let host = 'ctms';
+  try { host = new URL(process.env.CTMS_URL).hostname; } catch { /* keep fallback */ }
+
+  for (const it of items) {
+    const name = it.name || it.id || it.identityName || 'unnamed-identity';
+    const candidates = collectCertCandidates(it);
+    // cTMS-specific shapes that collectCertCandidates doesn't know about
+    if (it.publicKey)                 candidates.push(it.publicKey);
+    if (it.signingCertificateContent) candidates.push(it.signingCertificateContent);
+    if (it.publicKeyPem)              candidates.push(it.publicKeyPem);
+    for (const cand of candidates) {
+      const parsed = parseCertCandidate(cand);
+      if (!parsed) continue;
+      out.push({
+        kind:           'CTMS',
+        subaccountId:   'ctms-tenant',
+        subaccountName: host,
+        name,
+        ...parsed,
+        blastRadius:    `cTMS signing identity "${name}" — every transport import that verifies against this key`,
+      });
+    }
+  }
+  return out;
+}
+
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 class CertService extends cds.ApplicationService {
@@ -137,7 +327,7 @@ class CertService extends cds.ApplicationService {
         ackByKey.set(a.certKey, a.reason || '');
       }
 
-      return raw.map((c) => {
+      const enriched = raw.map((c) => {
         const days = daysUntil(c.notAfter);
         const certKey = `${c.kind}::${c.subaccountId}::${c.name}`;
         return {
@@ -149,11 +339,41 @@ class CertService extends cds.ApplicationService {
           ackReason:    ackByKey.get(certKey) || '',
         };
       }).sort((a, b) => (a.daysToExpiry ?? 99999) - (b.daysToExpiry ?? 99999));
+
+      // Fire ANS notifications for unacknowledged certs in the critical
+      // band (severity = 'error' or 'expired'). The library no-ops when
+      // ANS isn't configured and de-dups within a 12-hour window so a
+      // dashboard refresh doesn't re-page on-call.
+      const alertable = enriched.filter((c) => !c.acknowledged && ['error', 'expired'].includes(c.severity));
+      if (alertable.length && ans.hasCredentials()) {
+        ans.notifyFindings(alertable, (c) => ({
+          eventType: c.severity === 'expired' ? 'cert.expiry.expired' : 'cert.expiry.critical',
+          severity:  c.severity === 'expired' ? 'FATAL' : 'ERROR',
+          subject:   `${c.kind} cert "${c.name}" — ${c.severity === 'expired' ? 'EXPIRED' : `${c.daysToExpiry}d left`}`,
+          body:      `${c.kind} cert "${c.name}" (subject: ${c.subject || '?'}) expires ${c.notAfter}. Blast radius: ${c.blastRadius || 'see dashboard'}. Rotation owner: ${c.rotationOwner || 'unassigned'}.`,
+          resource: {
+            resourceName:     c.name,
+            resourceType:     `btp.cert.${c.kind.toLowerCase()}`,
+            resourceInstance: `${c.subaccountId}/${c.name}`,
+          },
+          tags: { subaccount: c.subaccountId, kind: c.kind, severity: c.severity },
+        })).catch((e) => LOG.warn(`ANS notify failed: ${e.message}`));
+      }
+
+      return enriched;
     });
 
     this.on('getSummary', async () => {
       const certs = await this.send('getCerts');
       const t = await getThresholds();
+      const hasDest  = !!process.env.DESTINATION_KEYS;
+      const hasIas   = !!(process.env.IAS_API_URL && process.env.IAS_CLIENT_ID && process.env.IAS_CLIENT_SECRET);
+      const hasXsuaa = getXsuaaKeys().length > 0;
+      const hasCtms  = !!(process.env.CTMS_URL && process.env.CTMS_TOKEN);
+      const sources = [hasDest, hasIas, hasXsuaa, hasCtms].filter(Boolean).length;
+      const dataSource = sources === 0 ? 'mock'
+                       : sources >= 2 ? 'live'
+                       : 'mixed';
       return {
         totalCerts:     certs.length,
         expiredCount:   certs.filter((c) => c.daysToExpiry !== null && c.daysToExpiry < 0).length,
@@ -161,6 +381,8 @@ class CertService extends cds.ApplicationService {
         warn30d:        certs.filter((c) => c.daysToExpiry !== null && c.daysToExpiry >  t.criticalDays && c.daysToExpiry <= t.warnDays).length,
         notice90d:      certs.filter((c) => c.daysToExpiry !== null && c.daysToExpiry >  t.warnDays && c.daysToExpiry <= t.noticeDays).length,
         unacknowledged: certs.filter((c) => !c.acknowledged && c.daysToExpiry !== null && c.daysToExpiry <= t.warnDays).length,
+        dataSource,
+        lastSyncAt:     new Date().toISOString(),
       };
     });
 
@@ -195,7 +417,14 @@ function lookupOwner(cert, registry) {
 }
 
 module.exports = CertService;
-module.exports.__test__ = { daysUntil, severityFor, parsePem, lookupOwner };
+module.exports.__test__ = {
+  daysUntil, severityFor, parsePem, lookupOwner,
+  collectCertCandidates, parseCertCandidate, loadIasCerts,
+  getXsuaaKeys, loadXsuaaTrustCerts, loadCtmsCerts,
+  // expose so tests can clear the IAS OAuth cache between runs
+  _resetIasTokenCache: () => { _iasTokenCache.token = null; _iasTokenCache.expiresAt = 0; },
+  _resetOAuthTokenCache: () => { for (const k of Object.keys(_tokenCaches)) delete _tokenCaches[k]; },
+};
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
 function mockCerts() {
