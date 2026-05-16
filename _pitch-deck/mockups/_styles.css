@@ -159,3 +159,71 @@ td.num { text-align: right; font-variant-numeric: tabular-nums; }
 .grade.C { background: #FCE7C8; color: #DF6E0C; }
 .grade.D { background: #FFD9D9; color: #BB0000; }
 .grade.F { background: #FFCCCC; color: #BB0000; }
+
+/* Data-source badge + synced timestamp (cross-app toolbar standard) */
+.data-source {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 3px 10px; border-radius: 12px;
+  font-size: 11px; font-weight: 500; line-height: 1.4;
+}
+.data-source::before {
+  content: ''; display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+}
+.data-source.live  { background: #E5F2D9; color: #1F5829; }
+.data-source.live::before  { background: #256F3A; }
+.data-source.mixed { background: #FCE7C8; color: #DF6E0C; }
+.data-source.mixed::before { background: #DF6E0C; }
+.data-source.mock  { background: #E5EAEC; color: #556B82; }
+.data-source.mock::before  { background: #8396A8; }
+.synced { color: #8396A8; font-size: 11px; }
+.synced strong { color: #556B82; font-weight: 500; }
+
+/* Probe status (variant of .status with neutral grey for NOT_PROBED) */
+.probe.ok        { background: #E5F2D9; color: #256F3A; }
+.probe.warn      { background: #FCE7C8; color: #DF6E0C; }
+.probe.crit      { background: #FFCCCC; color: #BB0000; }
+.probe.muted     { background: #ECEFF1; color: #556B82; }
+.probe {
+  display: inline-block; padding: 2px 8px; border-radius: 12px;
+  font-size: 10px; font-weight: 500; letter-spacing: .02em;
+}
+
+/* Sparkline cell (inline SVG container) */
+.spark {
+  display: inline-block; vertical-align: middle;
+  width: 88px; height: 28px;
+}
+.spark svg { display: block; }
+
+/* Drill-down dialog overlay (positioned absolute over page content) */
+.scrim {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 26, 61, 0.30);
+}
+.dialog {
+  position: absolute; background: white;
+  box-shadow: 0 16px 40px rgba(0,0,0,.25);
+  border-radius: 10px; overflow: hidden;
+}
+.dialog .dhead {
+  padding: 14px 18px; background: #354A5F; color: white;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.dialog .dhead h2 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.dialog .dhead .dsub { font-size: 11px; opacity: .85; margin-top: 3px; }
+.dialog .dhead .x { font-size: 18px; color: white; opacity: .7; cursor: pointer; }
+.dialog .dbody { padding: 0; }
+.dialog table th { background: #FAFAFB; }
+
+/* Tier-coloured row indicator (used in drill-downs) */
+.tier {
+  display: inline-block; padding: 2px 8px; border-radius: 4px;
+  font-size: 10px; font-weight: 600; letter-spacing: .04em;
+}
+.tier.prod { background: #FFD9D9; color: #BB0000; }
+.tier.qa   { background: #FCE7C8; color: #DF6E0C; }
+.tier.dev  { background: #E0EBFB; color: #0070F2; }
+
+/* Page-relative positioning so .scrim / .dialog can use absolute */
+.page { position: relative; }

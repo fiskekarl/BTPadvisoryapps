@@ -31,6 +31,8 @@
   <div class="toolbar">
     <span style="font-size:12px;color:#556B82">History window</span>
     <select style="padding:6px 10px;border:1px solid #BCC4CB;border-radius:6px;font-size:12px;background:white"><option>Last 12 months</option></select>
+    <span class="data-source live">Live data</span>
+    <span class="synced">Synced: <strong>7 min ago</strong></span>
     <div class="spacer"></div>
     <button class="btn">↻ Refresh</button>
     <button class="btn">⬇ Export</button>
@@ -48,7 +50,7 @@
         <tr>
           <th>Service</th><th>Plan</th><th>Unit</th>
           <th class="num">Entitled</th><th class="num">Avg</th><th class="num">Peak</th>
-          <th class="num">Utilization</th><th>Recommendation</th>
+          <th class="num">Utilization</th><th>Trend (12 mo)</th><th>Recommendation</th>
           <th class="num">Suggested</th><th class="num">Annual Saving</th>
         </tr>
       </thead>
@@ -58,6 +60,7 @@
           <td>hana</td><td>GB</td>
           <td class="num">50</td><td class="num">32.4</td><td class="num">38</td>
           <td class="num"><span class="status ok">64.8 %</span></td>
+          <td><span class="spark"><svg viewBox="0 0 88 28"><polyline points="4,16 11,15 18,14 25,13 32,12 39,12 46,11 53,10 60,10 67,9 74,8 80,8" fill="none" stroke="#256F3A" stroke-width="1.5"/></svg></span></td>
           <td><span class="status ok">KEEP</span></td>
           <td class="num">50</td><td class="num muted">—</td>
         </tr>
@@ -66,6 +69,7 @@
           <td>standard</td><td>Users</td>
           <td class="num">300</td><td class="num">75.2</td><td class="num">92</td>
           <td class="num"><span class="status warn">25.1 %</span></td>
+          <td><span class="spark"><svg viewBox="0 0 88 28"><polyline points="4,21 11,20 18,20 25,21 32,21 39,19 46,18 53,19 60,20 67,21 74,20 80,20" fill="none" stroke="#DF6E0C" stroke-width="1.5"/></svg></span></td>
           <td><span class="status warn">DOWNGRADE</span></td>
           <td class="num">140</td><td class="num"><span class="num-state ok">€ 2,880</span></td>
         </tr>
@@ -74,6 +78,7 @@
           <td>enterprise_agreement</td><td>K Calls</td>
           <td class="num">200</td><td class="num">168</td><td class="num">191</td>
           <td class="num"><span class="status crit">84.0 %</span></td>
+          <td><span class="spark"><svg viewBox="0 0 88 28"><polyline points="4,18 11,17 18,16 25,14 32,12 39,10 46,8 53,7 60,6 67,5 74,4 80,4" fill="none" stroke="#BB0000" stroke-width="1.5"/></svg></span></td>
           <td><span class="status crit">INVESTIGATE</span></td>
           <td class="num">200</td><td class="num muted">—</td>
         </tr>
@@ -82,6 +87,7 @@
           <td>standard</td><td>Users</td>
           <td class="num">100</td><td class="num">18.8</td><td class="num">22</td>
           <td class="num"><span class="status warn">18.8 %</span></td>
+          <td><span class="spark"><svg viewBox="0 0 88 28"><polyline points="4,22 11,22 18,21 25,21 32,22 39,22 46,21 53,21 60,20 67,21 74,21 80,21" fill="none" stroke="#DF6E0C" stroke-width="1.5"/></svg></span></td>
           <td><span class="status warn">DOWNGRADE</span></td>
           <td class="num">35</td><td class="num"><span class="num-state ok">€ 23,400</span></td>
         </tr>
@@ -90,6 +96,7 @@
           <td>standard</td><td>GB</td>
           <td class="num">100</td><td class="num">66</td><td class="num">78</td>
           <td class="num"><span class="status ok">66.0 %</span></td>
+          <td><span class="spark"><svg viewBox="0 0 88 28"><polyline points="4,16 11,15 18,14 25,13 32,12 39,12 46,11 53,11 60,10 67,10 74,9 80,9" fill="none" stroke="#256F3A" stroke-width="1.5"/></svg></span></td>
           <td><span class="status ok">KEEP</span></td>
           <td class="num">100</td><td class="num muted">—</td>
         </tr>
@@ -98,6 +105,7 @@
           <td>azure</td><td>Node-Hours</td>
           <td class="num">1,000</td><td class="num">698</td><td class="num">810</td>
           <td class="num"><span class="status ok">69.8 %</span></td>
+          <td><span class="spark"><svg viewBox="0 0 88 28"><polyline points="4,15 11,14 18,14 25,13 32,12 39,12 46,11 53,10 60,10 67,9 74,9 80,8" fill="none" stroke="#256F3A" stroke-width="1.5"/></svg></span></td>
           <td><span class="status ok">KEEP</span></td>
           <td class="num">1,000</td><td class="num muted">—</td>
         </tr>
@@ -106,6 +114,7 @@
           <td>standard</td><td>Cap. Units</td>
           <td class="num">10</td><td class="num">3.4</td><td class="num">5</td>
           <td class="num"><span class="status warn">34.0 %</span></td>
+          <td><span class="spark"><svg viewBox="0 0 88 28"><polyline points="4,22 11,22 18,21 25,22 32,21 39,22 46,22 53,21 60,21 67,20 74,21 80,21" fill="none" stroke="#DF6E0C" stroke-width="1.5"/></svg></span></td>
           <td><span class="status warn">DOWNGRADE</span></td>
           <td class="num">5</td><td class="num"><span class="num-state ok">€ 60,000</span></td>
         </tr>
@@ -114,6 +123,7 @@
           <td>default</td><td>GB</td>
           <td class="num">50</td><td class="num">18</td><td class="num">25</td>
           <td class="num"><span class="status ok">36.0 %</span></td>
+          <td><span class="spark"><svg viewBox="0 0 88 28"><polyline points="4,20 11,20 18,19 25,19 32,18 39,19 46,19 53,18 60,18 67,17 74,18 80,17" fill="none" stroke="#256F3A" stroke-width="1.5"/></svg></span></td>
           <td><span class="status ok">KEEP</span></td>
           <td class="num">50</td><td class="num muted">—</td>
         </tr>
