@@ -5,7 +5,7 @@
 <title>Destination &amp; Connectivity Inventory</title>
 <link rel="stylesheet" href="_styles.css" />
 <style>
-  .tiles-row { grid-template-columns: repeat(6, 1fr); }
+  .tiles-row { grid-template-columns: repeat(7, 1fr); }
 </style>
 </head>
 <body>
@@ -27,11 +27,14 @@
     <div class="tile"><div class="label">On-Premise</div><div class="value" style="color:#1D2D3E">12</div></div>
     <div class="tile crit"><div class="label">Certs &lt; 60d</div><div class="value">5</div></div>
     <div class="tile crit"><div class="label">Certs &lt; 14d</div><div class="value">2</div></div>
+    <div class="tile crit"><div class="label">Dangling Targets</div><div class="value">3</div><div class="sub">Probe → UNREACHABLE</div></div>
     <div class="tile crit"><div class="label">Open Findings</div><div class="value">15</div></div>
   </div>
 
   <div class="toolbar">
     <input class="search" value="🔎 Search destinations…" />
+    <span class="data-source live">Live data</span>
+    <span class="synced">Synced: <strong>4 min ago</strong> · Probe pass: <strong>3 min ago</strong></span>
     <div class="spacer"></div>
     <button class="btn">⚙ Edit Scan Policy</button>
     <button class="btn">↻ Refresh</button>
@@ -49,7 +52,7 @@
       <thead>
         <tr>
           <th>Subaccount</th><th>Name</th><th>Type</th><th>Proxy</th><th>Authentication</th>
-          <th>URL</th><th>Cert Expires</th><th class="num">Days</th>
+          <th>URL</th><th>Reachable</th><th>Cert Expires</th><th class="num">Days</th>
         </tr>
       </thead>
       <tbody>
@@ -59,6 +62,7 @@
           <td>HTTP</td><td>OnPremise</td>
           <td><span class="status crit">BasicAuthentication</span></td>
           <td class="muted">https://s4.acme.local</td>
+          <td><span class="probe muted">NOT_PROBED</span></td>
           <td class="muted">—</td><td class="num muted">—</td>
         </tr>
         <tr>
@@ -67,6 +71,7 @@
           <td>HTTP</td><td>Internet</td>
           <td><span class="status ok">OAuth2ClientCredentials</span></td>
           <td class="muted">https://api.successfactors.com</td>
+          <td><span class="probe ok">OK</span></td>
           <td>2026-06-15</td><td class="num"><span class="num-state warn">38</span></td>
         </tr>
         <tr>
@@ -75,6 +80,7 @@
           <td>HTTP</td><td>OnPremise</td>
           <td><span class="status info">ClientCertificateAuthentication</span></td>
           <td class="muted">https://crm-old.acme.local</td>
+          <td><span class="probe muted">NOT_PROBED</span></td>
           <td>2026-05-19</td><td class="num"><span class="num-state crit">11</span></td>
         </tr>
         <tr>
@@ -83,14 +89,16 @@
           <td>HTTP</td><td>Internet</td>
           <td><span class="status ok">OAuth2SAMLBearerAssertion</span></td>
           <td class="muted">https://api.ariba.com</td>
+          <td><span class="probe ok">OK</span></td>
           <td>2027-01-20</td><td class="num"><span class="num-state ok">258</span></td>
         </tr>
-        <tr>
+        <tr style="background:#FFF5F5">
           <td>QA</td>
-          <td><div class="id">s4-erp-qa</div></td>
-          <td>HTTP</td><td>OnPremise</td>
-          <td><span class="status crit">BasicAuthentication</span></td>
-          <td class="muted">https://s4-qa.acme.local</td>
+          <td><div class="id">legacy-mq</div></td>
+          <td>HTTP</td><td>Internet</td>
+          <td><span class="status ok">OAuth2ClientCredentials</span></td>
+          <td class="muted">https://mq.acme-old.example</td>
+          <td><span class="probe crit">UNREACHABLE</span></td>
           <td class="muted">—</td><td class="num muted">—</td>
         </tr>
         <tr>
@@ -99,6 +107,7 @@
           <td>HTTP</td><td>Internet</td>
           <td><span class="status ok">OAuth2ClientCredentials</span></td>
           <td class="muted">https://stage.successfactors.com</td>
+          <td><span class="probe ok">OK</span></td>
           <td>2026-09-04</td><td class="num"><span class="num-state ok">119</span></td>
         </tr>
         <tr>
@@ -107,6 +116,7 @@
           <td>HTTP</td><td>Internet</td>
           <td><span class="status muted">NoAuthentication</span></td>
           <td class="muted">https://mock.acme.dev</td>
+          <td><span class="probe warn">TIMEOUT</span></td>
           <td class="muted">—</td><td class="num muted">—</td>
         </tr>
         <tr>
@@ -115,6 +125,7 @@
           <td>HTTP</td><td>Internet</td>
           <td><span class="status info">OAuth2ClientCredentials</span></td>
           <td class="muted">https://emessaging.cfapps.eu10…</td>
+          <td><span class="probe warn">AUTH_FAILED</span></td>
           <td>2026-11-30</td><td class="num"><span class="num-state ok">206</span></td>
         </tr>
       </tbody>

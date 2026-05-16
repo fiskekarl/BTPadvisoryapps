@@ -31,6 +31,8 @@
   <div class="toolbar">
     <span style="font-size:12px;color:#556B82">Month</span>
     <input style="padding:6px 10px;border:1px solid #BCC4CB;border-radius:6px;font-size:12px;width:110px" value="2026-05" />
+    <span class="data-source live">Live data</span>
+    <span class="synced">Synced: <strong>9 min ago</strong></span>
     <div class="spacer"></div>
     <button class="btn">↻ Refresh</button>
     <button class="btn">⬇ Export</button>
@@ -97,6 +99,65 @@
         </tr>
       </tfoot>
     </table>
+  </div>
+
+  <!-- LeafCost drill-down for CC-1005 (Digital Workplace) -->
+  <div class="scrim" style="top:184px;"></div>
+  <div class="dialog" style="top:236px; left: 240px; width: 1120px;">
+    <div class="dhead">
+      <div>
+        <h2>CC-1005 — Digital Workplace — Cost Breakdown</h2>
+        <div class="dsub">€ 6,072.00 total · sorted by cost ↓ · <strong>direct</strong> vs. <strong>shared</strong> attribution</div>
+      </div>
+      <div class="x">✕</div>
+    </div>
+    <div class="dbody">
+      <table>
+        <thead>
+          <tr>
+            <th>Service</th><th>Plan</th><th>Subaccount</th><th>Attribution</th><th class="num">Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="id">SAP Build Work Zone</div></td>
+            <td>standard</td><td>Portal</td>
+            <td><span class="status info">direct</span></td>
+            <td class="num" style="font-weight:600">€ 3,420.00</td>
+          </tr>
+          <tr>
+            <td><div class="id">SAP HANA Cloud</div></td>
+            <td>hana</td><td>Portal</td>
+            <td><span class="status info">direct</span></td>
+            <td class="num" style="font-weight:600">€ 1,840.00</td>
+          </tr>
+          <tr>
+            <td><div class="id">Cloud Foundry Runtime</div></td>
+            <td>standard</td><td>Portal</td>
+            <td><span class="status info">direct</span></td>
+            <td class="num" style="font-weight:600">€ 680.00</td>
+          </tr>
+          <tr>
+            <td><div class="id">Authorization &amp; Trust Mgmt</div></td>
+            <td>application</td><td>—</td>
+            <td><span class="status warn">shared · even</span></td>
+            <td class="num">€ 66.00</td>
+          </tr>
+          <tr>
+            <td><div class="id">Identity Authentication</div></td>
+            <td>application</td><td>—</td>
+            <td><span class="status warn">shared · weighted</span></td>
+            <td class="num">€ 38.00</td>
+          </tr>
+          <tr>
+            <td><div class="id">Audit Log Management</div></td>
+            <td>default</td><td>—</td>
+            <td><span class="status warn">shared · even</span></td>
+            <td class="num">€ 28.00</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 </body>

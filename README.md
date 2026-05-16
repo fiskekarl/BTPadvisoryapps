@@ -365,6 +365,8 @@ RUNBOOK-client-deploy.md   Per-client delivery checklist (11 steps)
 
 A 20-slide PowerPoint pitch deck is included at [`_pitch-deck/BTP-Advisory-Pitch.pptx`](_pitch-deck/BTP-Advisory-Pitch.pptx). Source for the deck is [`_pitch-deck/build-deck.js`](_pitch-deck/build-deck.js) — regenerate with `node build-deck.js`.
 
+App screenshots used in this README and in the deck are rendered from HTML mockups in [`_pitch-deck/mockups/`](_pitch-deck/mockups/) via headless Chromium. Regenerate with `node render-screenshots.js` (auto-detects chromium at `/opt/pw-browsers/`, `/usr/bin/chromium`, or `$CHROMIUM`).
+
 ---
 
 ## Testing

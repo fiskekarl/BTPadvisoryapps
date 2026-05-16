@@ -32,6 +32,8 @@
 
   <div class="toolbar">
     <input class="search" value="🔎 Filter by user, RC, or subaccount…" />
+    <span class="data-source live">Live data</span>
+    <span class="synced">Synced: <strong>6 min ago</strong></span>
     <div class="spacer"></div>
     <button class="btn">↻ Refresh</button>
     <button class="btn">⬇ Export Findings</button>
@@ -88,6 +90,71 @@
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- Drill-down dialog: Bob Beck's RC assignments across all tiers -->
+  <div class="scrim" style="top:184px;"></div>
+  <div class="dialog" style="top:240px; left: 240px; width: 1120px;">
+    <div class="dhead">
+      <div>
+        <h2>Bob Beck — Role Collection Assignments</h2>
+        <div class="dsub">bob@acme.com · 7 assignments across <strong>prod</strong>, <strong>qa</strong>, <strong>dev</strong></div>
+      </div>
+      <div class="x">✕</div>
+    </div>
+    <div class="dbody">
+      <table>
+        <thead>
+          <tr>
+            <th>Tier</th><th>Subaccount</th><th>Role Collection</th><th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#FFF5F5">
+            <td><span class="tier prod">PROD</span></td>
+            <td>Production</td>
+            <td><div class="id">Subaccount Administrator</div></td>
+            <td class="muted">Full administrative access to the Production subaccount</td>
+          </tr>
+          <tr style="background:#FFF5F5">
+            <td><span class="tier prod">PROD</span></td>
+            <td>Analytics</td>
+            <td><div class="id">Cloud Foundry Space Developer</div></td>
+            <td class="muted">Deploy &amp; manage CF apps in the dev space</td>
+          </tr>
+          <tr>
+            <td><span class="tier qa">QA</span></td>
+            <td>QA</td>
+            <td><div class="id">Subaccount Administrator</div></td>
+            <td class="muted">Full administrative access to the QA subaccount</td>
+          </tr>
+          <tr>
+            <td><span class="tier qa">QA</span></td>
+            <td>QA</td>
+            <td><div class="id">BTP Subaccount Lifecycle Administrator</div></td>
+            <td class="muted">Edit drift rules + acknowledge findings</td>
+          </tr>
+          <tr>
+            <td><span class="tier dev">DEV</span></td>
+            <td>Dev</td>
+            <td><div class="id">Subaccount Administrator</div></td>
+            <td class="muted">Full administrative access to the Dev subaccount</td>
+          </tr>
+          <tr>
+            <td><span class="tier dev">DEV</span></td>
+            <td>Dev</td>
+            <td><div class="id">Cloud Foundry Space Developer</div></td>
+            <td class="muted">Deploy &amp; manage CF apps in the dev space</td>
+          </tr>
+          <tr>
+            <td><span class="tier dev">DEV</span></td>
+            <td>Sandbox</td>
+            <td><div class="id">Cloud Foundry Org Manager</div></td>
+            <td class="muted">Org-level management in Sandbox</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 </div>
 </body>
