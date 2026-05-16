@@ -71,16 +71,20 @@ This is also where you set per-client env vars later (`DESTINATION_KEYS`, `IAS_*
 
 ```powershell
 cd <APP>
-npm ci
-npm ci --prefix app/<ui-folder>
+npm install --no-audit --no-fund
+npm install --prefix app/<ui-folder> --no-audit --no-fund
 mbt build -p cf
 # Produces mta_archives\<id>_1.0.0.mtar
 ```
 
+> **Note**: `npm install` (not `npm ci`) is the project standard — apps ship without `package-lock.json` so CI builds stay tolerant of patch-level dep refreshes. The MTA build's `before-all` commands match this. If you want reproducible deploys, generate a lockfile and commit it, then switch to `npm ci`.
+
+> **Note (UI build output)**: the html5 module's `build-parameters` does not specify `build-result`. If `mbt build` complains about this on newer CLI versions (1.2.49+), add `build-result: dist` under the `lifecycle-ui` (or analogous) module's `build-parameters`.
+
 Common failures:
-- `npm ci` fails → delete `node_modules\` and `package-lock.json`, retry.
+- `npm install` fails → delete `node_modules\`, retry; check Node 20+.
 - `cds build` fails → check `node --version` is 20+.
-- UI build fails → run the `npm ci --prefix` step above first.
+- UI build fails → run the `npm install --prefix` step above first.
 
 ---
 
@@ -174,6 +178,14 @@ Then assemble:
 ```powershell
 cf set-env lifecycle-srv SUBACCOUNT_KEYS '<paste-array-json>'
 cf restage lifecycle-srv
+
+# Optional: seed tier drift-baselines from the canonical pack.
+TOKEN=$(cf oauth-token)
+PACK=$(jq -Rs . < ../baselines/btp-best-practice-2026.05.json)
+curl -X POST "https://lifecycle-<client>.cfapps.<region>.hana.ondemand.com/odata/v4/lifecycle/importBaseline" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"packJson\": $PACK}"
+# → "Imported 5 DriftBaseline row(s) from pack 2026.05"
 ```
 
 ### App #2 — Destination Inventory
@@ -182,14 +194,49 @@ cf restage lifecycle-srv
 # To switch app #2 to SUBACCOUNT_KEYS, drop the destination sub-section in
 # srv/destinv-service.js. Today both work — DESTINATION_KEYS overrides.
 cf set-env destinv-srv DESTINATION_KEYS '<paste-array-json>'
+
+# Optional: ANS for critical-finding notifications (BasicAuth-in-prod,
+# DANGLING_TARGET, expiring certs <14d). No-op if unset.
+cf set-env destinv-srv ANS_URL           'https://clm-sl-ans-live-ans-service-api.cfapps.<region>.hana.ondemand.com'
+cf set-env destinv-srv ANS_OAUTH_URL     'https://<subdomain>.authentication.<region>.hana.ondemand.com/oauth/token'
+cf set-env destinv-srv ANS_CLIENT_ID     '<ans-client-id>'
+cf set-env destinv-srv ANS_CLIENT_SECRET '<ans-client-secret>'
 cf restage destinv-srv
 ```
+
+> **Outbound traffic warning**: every `getDestinations()` call now does a
+> live reachability probe per destination (HTTP HEAD with 5s timeout,
+> bounded 5 lanes parallel, 60s in-memory cache). For a global account
+> with 50 destinations across 5 subaccounts this is ~250 outbound
+> HEAD requests on the first dashboard load after the cache expires.
+> If the client has WAF rules / egress firewalls in front of their
+> target systems, warm the operator that the probe will appear in
+> their access logs — the probe's User-Agent is the default axios one
+> (`axios/1.x`). Set the destination service's `ScanPolicy.flagDanglingTargets = false`
+> in the admin UI to disable the rule that consumes probe results, but
+> the probe itself runs unconditionally.
 
 ### App #3 — Compliance Scorecard
 ```powershell
 cf set-env score-srv SUBACCOUNT_KEYS '<paste-array-json>'
+
+# Optional: ANS notifications fire when overallGrade drops to D or F.
+cf set-env score-srv ANS_URL           'https://clm-sl-ans-live-ans-service-api.cfapps.<region>.hana.ondemand.com'
+cf set-env score-srv ANS_OAUTH_URL     'https://<subdomain>.authentication.<region>.hana.ondemand.com/oauth/token'
+cf set-env score-srv ANS_CLIENT_ID     '<ans-client-id>'
+cf set-env score-srv ANS_CLIENT_SECRET '<ans-client-secret>'
 cf restage score-srv
+
+# Seed the canonical 20-rule baseline from the shipped pack:
+TOKEN=$(cf oauth-token)
+PACK=$(jq -Rs . < ../baselines/btp-best-practice-2026.05.json)
+curl -X POST "https://score-<client>.cfapps.<region>.hana.ondemand.com/odata/v4/score/importBaseline" \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+  -d "{\"packJson\": $PACK}"
+# → "Imported 20 rule(s) from pack 2026.05"
 ```
+
+The pack lives at [`baselines/btp-best-practice-2026.05.json`](baselines/btp-best-practice-2026.05.json). Without this step, app #3 starts with only the 6 originally-seeded rules — the broader 20-rule CIS-aligned set requires the import.
 
 ### App #4 — Identity Federation
 ```powershell
@@ -240,6 +287,23 @@ cf set-env cert-srv IAS_API_URL       'https://<tenant>.accounts.ondemand.com'
 cf set-env cert-srv IAS_OAUTH_URL     'https://<tenant>.accounts.ondemand.com/oauth2/token'
 cf set-env cert-srv IAS_CLIENT_ID     '<client-id>'
 cf set-env cert-srv IAS_CLIENT_SECRET '<client-secret>'
+
+# XSUAA trust-configurations scan: either set a dedicated XSUAA_KEYS
+# envelope, OR re-use SUBACCOUNT_KEYS (the lib falls back to the
+# `.xsuaa` block of each entry).
+cf set-env cert-srv SUBACCOUNT_KEYS  '<paste-array-json>'   # reuse from apps 1/4/5/6
+# (alternatively, build a dedicated XSUAA_KEYS array — see baselines/README.md)
+
+# Optional: cTMS signing-identity scan.
+cf set-env cert-srv CTMS_URL          'https://<host>/v2'
+cf set-env cert-srv CTMS_TOKEN        '<oauth-bearer>'
+
+# Optional: ANS notifications fire on error/expired severity certs
+# (rotation-owner + blast-radius embedded in the alert body).
+cf set-env cert-srv ANS_URL           'https://clm-sl-ans-live-ans-service-api.cfapps.<region>.hana.ondemand.com'
+cf set-env cert-srv ANS_OAUTH_URL     'https://<subdomain>.authentication.<region>.hana.ondemand.com/oauth/token'
+cf set-env cert-srv ANS_CLIENT_ID     '<ans-client-id>'
+cf set-env cert-srv ANS_CLIENT_SECRET '<ans-client-secret>'
 cf restage cert-srv
 ```
 
@@ -313,10 +377,33 @@ For each deployed app, verify:
 
 - [ ] Tile appears in Work Zone (or HTML5 Apps Repo) under correct catalog.
 - [ ] Cold-load shows real client data (not mock — confirm by recognizable subaccount/cert/destination names).
+- [ ] **Data-source badge in the toolbar reads `Live data` (or `Mixed`)**, not `Mock data`. If it says Mock, the env-var bindings in §5 are wrong for that app.
+- [ ] **"Synced: <timestamp>" label updates** when you click Refresh.
 - [ ] Viewer-role user sees data but no admin actions.
 - [ ] Admin-role user sees admin actions and they work end-to-end (snapshot, edit, etc.).
 - [ ] Excel export produces a clean, client-presentable file (no internal labels or hardcoded test data).
 - [ ] No 403/500 in `cf logs <srv> --recent` after first user load.
+
+### Per-app additional smoke items
+
+| App | Verify |
+|---|---|
+| #1 | "Users" column shows non-zero counts per subaccount (came from XSUAA enumeration). If 0 across the board, SUBACCOUNT_KEYS xsuaa blocks are wrong. |
+| #2 | "Reachable" column populated (`OK` / `AUTH_FAILED` / `UNREACHABLE` / `TIMEOUT` / `NOT_PROBED`). All `UNKNOWN` ⇒ the probe pass is failing — check `cf logs` for "Probe pass failed". |
+| #3 | After `importBaseline`: scorecard runs **20** rules (count in the header tile), not 6. |
+| #5 | Click a user row → drill-down dialog opens with tier-coloured RC assignments and a "X assignments across prod, qa, dev" subtitle. |
+| #7 | Each entitlement row shows a tiny **sparkline** in the Trend column. If sparklines are blank squares, the UI5 microchart library failed to load — check `sap.suite.ui.microchart` is bound in the destination service. |
+| #9 | CertRow `kind` column shows multiple types: `DESTINATION`, `IAS_SAML`, `XSUAA_TRUST`, `CTMS`. If only DESTINATION, the other scanners' env vars are unset. |
+| #10 | Click an invoice row → `LeafCost` drill-down opens, sorted by cost descending, with `direct`/`shared` badges. |
+
+### ANS notifications (if configured)
+
+For each app that has `ANS_*` env vars set:
+- [ ] Trigger a critical-band finding in the dashboard (e.g. add a destination with `BasicAuthentication` in a prod-named subaccount for #2).
+- [ ] Within 30s, confirm the event appears in the ANS instance's event history.
+- [ ] Confirm the configured ANS subscription rule routed the event to Slack / Teams / email / webhook as expected.
+
+If events arrive at ANS but don't route, **the issue is on the ANS side, not the producer**: open ANS cockpit → Subscriptions → check the filter rules match the eventType (e.g. `cert.expiry.critical`, `destination.basic_auth_in_prod`, `compliance.scorecard.regressed`) and severity (`ERROR` / `FATAL`).
 
 ---
 
