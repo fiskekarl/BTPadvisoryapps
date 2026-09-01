@@ -18,6 +18,18 @@ build-parameters:
 
 modules:
 
+  - name: destinv-approuter
+    type: approuter.nodejs
+    path: app/router
+    parameters:
+      memory: 256M
+      disk-quota: 256M
+      instances: 1
+    requires:
+      - name: destinv-xsuaa
+      - name: destinv-html5-repo-runtime
+      - name: destinv-destination-service
+
   - name: destinv-ui
     type: html5
     path: app/destination-dashboard
@@ -144,3 +156,9 @@ resources:
     parameters:
       service: html5-apps-repo
       service-plan: app-host
+
+  - name: destinv-html5-repo-runtime
+    type: org.cloudfoundry.managed-service
+    parameters:
+      service: html5-apps-repo
+      service-plan: app-runtime

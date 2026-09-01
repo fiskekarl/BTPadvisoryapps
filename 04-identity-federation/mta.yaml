@@ -18,6 +18,18 @@ build-parameters:
 
 modules:
 
+  - name: ident-approuter
+    type: approuter.nodejs
+    path: app/router
+    parameters:
+      memory: 256M
+      disk-quota: 256M
+      instances: 1
+    requires:
+      - name: ident-xsuaa
+      - name: ident-html5-repo-runtime
+      - name: ident-destination-service
+
   - name: ident-ui
     type: html5
     path: app/identity-dashboard
@@ -88,6 +100,10 @@ resources:
   - name: ident-html5-repo-host
     type: org.cloudfoundry.managed-service
     parameters: { service: html5-apps-repo, service-plan: app-host }
+
+  - name: ident-html5-repo-runtime
+    type: org.cloudfoundry.managed-service
+    parameters: { service: html5-apps-repo, service-plan: app-runtime }
 
   - name: ident-destination-service
     type: org.cloudfoundry.managed-service

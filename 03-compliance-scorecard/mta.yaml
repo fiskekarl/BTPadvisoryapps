@@ -18,6 +18,18 @@ build-parameters:
 
 modules:
 
+  - name: score-approuter
+    type: approuter.nodejs
+    path: app/router
+    parameters:
+      memory: 256M
+      disk-quota: 256M
+      instances: 1
+    requires:
+      - name: score-xsuaa
+      - name: score-html5-repo-runtime
+      - name: score-destination-service
+
   - name: score-ui
     type: html5
     path: app/scorecard-dashboard
@@ -96,6 +108,10 @@ resources:
   - name: score-html5-repo-host
     type: org.cloudfoundry.managed-service
     parameters: { service: html5-apps-repo, service-plan: app-host }
+
+  - name: score-html5-repo-runtime
+    type: org.cloudfoundry.managed-service
+    parameters: { service: html5-apps-repo, service-plan: app-runtime }
 
   - name: score-destination-service
     type: org.cloudfoundry.managed-service
