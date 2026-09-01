@@ -21,7 +21,7 @@ modules:
   - name: ident-ui
     type: html5
     path: app/identity-dashboard
-    build-parameters: { builder: custom, commands: [npm run build], supported-platforms: [] }
+    build-parameters: { builder: custom, commands: [npm run build], build-result: dist, supported-platforms: [] }
 
   - name: ident-ui-deployer
     type: com.sap.application.content
@@ -45,7 +45,8 @@ modules:
     provides:
       - name: ident-srv-api
         public: true
-        properties: { srv-url: ${default-url} }
+        properties:
+          srv-url: ${default-url}
 
   - name: ident-destination-content
     type: com.sap.application.content
@@ -53,6 +54,7 @@ modules:
       - { name: ident-destination-service, parameters: { content-target: true } }
       - { name: ident-xsuaa, parameters: { service-key: { name: ident-xsuaa-key } } }
       - { name: ident-html5-repo-host, parameters: { service-key: { name: ident-html5-repo-host-key } } }
+      - name: ident-srv-api
     parameters:
       content:
         instance:

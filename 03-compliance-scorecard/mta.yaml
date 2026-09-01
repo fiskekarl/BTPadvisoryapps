@@ -24,6 +24,7 @@ modules:
     build-parameters:
       builder: custom
       commands: [npm run build]
+      build-result: dist
       supported-platforms: []
 
   - name: score-ui-deployer
@@ -49,7 +50,8 @@ modules:
     provides:
       - name: score-srv-api
         public: true
-        properties: { srv-url: ${default-url} }
+        properties:
+          srv-url: ${default-url}
 
   - name: score-destination-content
     type: com.sap.application.content
@@ -60,6 +62,7 @@ modules:
         parameters: { service-key: { name: score-xsuaa-key } }
       - name: score-html5-repo-host
         parameters: { service-key: { name: score-html5-repo-host-key } }
+      - name: score-srv-api
     parameters:
       content:
         instance:

@@ -25,6 +25,7 @@ modules:
       builder: custom
       commands:
         - npm run build
+      build-result: dist
       supported-platforms: []
 
   - name: destinv-ui-deployer
@@ -73,6 +74,7 @@ modules:
         parameters:
           service-key:
             name: destinv-html5-repo-host-key
+      - name: destinv-srv-api
     parameters:
       content:
         instance:

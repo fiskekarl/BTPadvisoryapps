@@ -15,7 +15,22 @@
       }
     },
     "i18n": "i18n/i18n.properties",
-    "ach": "CA-BTP"
+    "ach": "CA-BTP",
+    "crossNavigation": {
+      "inbounds": {
+        "lifecycle-display": {
+          "signature": {
+            "parameters": {},
+            "additionalParameters": "allowed"
+          },
+          "semanticObject": "lifecycle",
+          "action": "display",
+          "title": "{{appTitle}}",
+          "subTitle": "{{appDescription}}",
+          "icon": "sap-icon://overview-chart"
+        }
+      }
+    }
   },
 
   "sap.ui": {

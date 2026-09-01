@@ -26,6 +26,7 @@ modules:
       builder: custom
       commands:
         - npm run build
+      build-result: dist
       supported-platforms: []
 
   # ─── 2. UI5 App Deployer ────────────────────────────────────────────────────
@@ -77,6 +78,7 @@ modules:
         parameters:
           service-key:
             name: lifecycle-html5-repo-host-key
+      - name: lifecycle-srv-api
     parameters:
       content:
         instance:

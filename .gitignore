@@ -28,6 +28,9 @@ resources/
 *.zip
 .mtaignore.local
 
+# UI5 build output
+dist/
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
